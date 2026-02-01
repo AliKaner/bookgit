@@ -1,9 +1,12 @@
-
+import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import Image from 'next/image'
 import styles from './page.module.scss'
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
   return (
     <main className={styles.main}>
       <header className={styles.header}>
@@ -21,9 +24,15 @@ export default function Home() {
           <Link href="/explore" style={{ marginRight: '1.5rem', textDecoration: 'none', color: '#666' }}>
             Explore
           </Link>
-          <Link href="/login" className={styles.ctaButton} style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>
-            Login
-          </Link>
+          {user ? (
+            <Link href="/dashboard" className={styles.ctaButton} style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>
+              Dashboard
+            </Link>
+          ) : (
+            <Link href="/login" className={styles.ctaButton} style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>
+              Login
+            </Link>
+          )}
         </nav>
       </header>
 
