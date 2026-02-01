@@ -13,10 +13,21 @@ export async function POST(request: Request) {
     return new NextResponse('Unauthorized', { status: 401 })
   }
 
-  const { bookId, parentChapterId, title, content, authorId } = await request.json()
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return new NextResponse('Bad Request: Invalid JSON', { status: 400 });
+  }
+
+  const { bookId, parentChapterId, title, content, authorId } = body;
 
   if (authorId !== user.id) {
     return new NextResponse('Unauthorized', { status: 401 })
+  }
+
+  if (!bookId) {
+    return new NextResponse('Bad Request: Missing bookId', { status: 400 })
   }
 
   try {
@@ -28,34 +39,24 @@ export async function POST(request: Request) {
           .select({ count: count() })
           .from(chapters)
           .where(eq(chapters.parentChapterId, parentChapterId))
-      newOrderIndex = result.count + 1
-    } else if (bookId) {
+      newOrderIndex = (result?.count ?? 0) + 1
+    } else {
       // Root chapters for a book
        const [result] = await db
           .select({ count: count() })
           .from(chapters)
           .where(and(eq(chapters.bookId, bookId), isNull(chapters.parentChapterId)))
-       newOrderIndex = result ? result.count + 1 : 1
-    } else {
-       // Should not happen if API is used correctly
-       console.error("Missing bookId for root chapter creation")
-       return new NextResponse('Bad Request: Missing bookId', { status: 400 })
+       newOrderIndex = (result?.count ?? 0) + 1
     }
 
-    // Simplified query logic using dynamic where
-    // But wait, 'parentChapterId' is passed from client.
-    
-    // We need to support creating a root chapter.
-    // If parentChapterId is NOT provided (null/undefined), it's a root chapter.
-    
     const [newChapter] = await db.insert(chapters).values({
       bookId,
       parentChapterId: parentChapterId || null, // Ensure explicit null
       authorId: user.id,
       title,
       content,
-      orderIndex: newOrderIndex, // TODO: Fix order index logic for root vs branch, generic is fine for MVP (1)
-      isCanonical: !parentChapterId, // First chapter is canonical by default? Or user choice. Let's make it canonical if root.
+      orderIndex: newOrderIndex,
+      isCanonical: !parentChapterId, // First chapter is canonical by default
     }).returning({ id: chapters.id })
 
     return NextResponse.json({ chapterId: newChapter.id })
