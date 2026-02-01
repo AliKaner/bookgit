@@ -1,12 +1,22 @@
 
 import Link from 'next/link'
+import Image from 'next/image'
 import styles from './page.module.scss'
 
 export default function Home() {
   return (
     <main className={styles.main}>
       <header className={styles.header}>
-        <div className={styles.logo}>CollabBook</div>
+        <div className={styles.logo}>
+          <Image 
+            src="/android-chrome-192x192.png" 
+            alt="CollabBook Logo" 
+            width={32} 
+            height={32} 
+            style={{ marginRight: '0.5rem', borderRadius: '4px' }}
+          />
+          CollabBook
+        </div>
         <nav className={styles.nav}>
           <Link href="/explore" style={{ marginRight: '1.5rem', textDecoration: 'none', color: '#666' }}>
             Explore

@@ -21,11 +21,36 @@ export const metadata: Metadata = {
     description: "The first collaborative book platform where every chapter is a choice. Write the canonical story or branch off into your own universe.",
     type: "website",
     siteName: "CollabBook",
+    images: [
+      {
+        url: '/android-chrome-512x512.png', // Using high-res icon as OG image fallback
+        width: 512,
+        height: 512,
+        alt: 'CollabBook Logo',
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "CollabBook - Collaborative Storytelling",
     description: "Write together. Branch infinite stories.",
+    images: ['/android-chrome-512x512.png'],
+  },
+  icons: {
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-touch-icon.png' },
+    ],
+    other: [
+      {
+        rel: 'manifest',
+        url: '/site.webmanifest',
+      },
+    ],
   },
 };
 

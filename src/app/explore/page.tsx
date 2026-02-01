@@ -28,7 +28,7 @@ export default async function ExplorePage() {
         createdAt: books.createdAt,
       })
       .from(books)
-      .innerJoin(profiles, eq(books.authorId, profiles.id))
+      .leftJoin(profiles, eq(books.authorId, profiles.id))
       .where(eq(books.isPublic, true))
       .orderBy(desc(books.createdAt))
   } catch (e) {
