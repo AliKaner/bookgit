@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import styles from './book-detail.module.scss'
 import { createClient } from '@/lib/supabase/server'
+import { Badge } from '@/components/ui/Badge'
 
 // Fetch full tree
 async function getBookTree(bookId: string) {
@@ -67,22 +68,17 @@ const TreeNode = ({ node }: { node: any }) => {
 
 export default async function BookDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  
-  // Fetch Book
-  const [book] = await db.select().from(books).where(eq(books.id, id))
+    const [book] = await db.select().from(books).where(eq(books.id, id))
   if (!book) notFound()
 
-  // Fetch Original Book if it exists
   let originalBook = null
   if (book.originalBookId) {
     const [res] = await db.select({ id: books.id, title: books.title }).from(books).where(eq(books.id, book.originalBookId))
     originalBook = res
   }
 
-  // Fetch Tree
   const tree = await getBookTree(id)
 
-  // Fetch current user to check ownership
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const isOwner = user && user.id === book.authorId
@@ -96,16 +92,17 @@ export default async function BookDetailPage({ params }: { params: Promise<{ id:
           ← Back to Dashboard
         </Link>
       </nav>
-
       <header className={styles.header}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-                <h1>{book.title}</h1>
-                 {originalBook && (
-                  <Link href={`/books/${originalBook.id}`} className={styles.forkLabel}>
-                    Forked from {originalBook.title}
-                  </Link>
-                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+                    <h1>{book.title}</h1>
+                    {originalBook && (
+                        <Badge href={`/books/${originalBook.id}`} variant="outline">
+                           Forked from {originalBook.title}
+                        </Badge>
+                    )}
+                </div>
                 <p>{book.description}</p>
             </div>
             {isOwner && (
