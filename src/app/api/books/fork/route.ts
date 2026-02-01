@@ -25,8 +25,8 @@ export async function POST(request: Request) {
 
     // 2. Create new book entry
     const [newBook] = await db.insert(books).values({
-      title: `${originalBook.title} (Fork)`,
-      description: `Forked from ${originalBook.title}. ${originalBook.description}`,
+      title: originalBook.title, // Keep same title, badge will handle "Fork" indication
+      description: originalBook.description, // Keep same description
       authorId: user.id,
       originalBookId: originalBook.id,
       isPublic: true,
