@@ -45,12 +45,6 @@ export const metadata: Metadata = {
     apple: [
       { url: '/apple-touch-icon.png' },
     ],
-    other: [
-      {
-        rel: 'manifest',
-        url: '/site.webmanifest',
-      },
-    ],
   },
 };
 
