@@ -21,6 +21,8 @@
   border-bottom: 1px solid rgba(0,0,0,0.05);
 
   .logo {
+    display: flex; /* Centering fix */
+    align-items: center; /* Centering fix */
     font-size: 1.25rem;
     font-weight: 700;
     letter-spacing: -0.03em;
