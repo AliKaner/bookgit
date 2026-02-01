@@ -11,11 +11,12 @@ import { Badge } from '@/components/ui/Badge'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { data, error } = await supabase.auth.getUser()
 
-  if (!user) {
+  if (error || !data?.user) {
     redirect('/login')
   }
+  const user = data.user
 
   const originalBooks = alias(books, 'originalBooks')
 
