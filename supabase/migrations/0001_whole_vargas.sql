@@ -1,0 +1,2 @@
+ALTER TABLE "books" ENABLE ROW LEVEL SECURITY;--> statement-breakpoint
+CREATE POLICY "Public books are viewable by everyone" ON "books" AS PERMISSIVE FOR SELECT TO public USING ("books"."is_public" = true);

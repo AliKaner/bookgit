@@ -1,5 +1,6 @@
 
-import { pgTable, uuid, text, boolean, jsonb, integer, timestamp, foreignKey } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, text, boolean, jsonb, integer, timestamp, foreignKey, pgPolicy } from 'drizzle-orm/pg-core'
+import { sql } from 'drizzle-orm'
 
 export const profiles = pgTable('profiles', {
   id: uuid('id').primaryKey().notNull(), // Links to auth.users
@@ -17,13 +18,18 @@ export const books = pgTable('books', {
   originalBookId: uuid('original_book_id'), // Self-reference for forking
   createdAt: timestamp('created_at').defaultNow().notNull(),
 }, (table) => {
-  return {
-    parentReference: foreignKey({
+  return [
+    foreignKey({
       columns: [table.originalBookId],
       foreignColumns: [table.id],
       name: 'books_original_book_id_fkey'
+    }),
+    pgPolicy("Public books are viewable by everyone", {
+      for: "select",
+      to: ["public"],
+      using: sql`${table.isPublic} = true`,
     })
-  }
+  ]
 })
 
 export const chapters = pgTable('chapters', {

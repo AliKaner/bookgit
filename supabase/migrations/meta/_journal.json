@@ -8,6 +8,13 @@
       "when": 1769954004479,
       "tag": "0000_stiff_punisher",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1769964494933,
+      "tag": "0001_whole_vargas",
+      "breakpoints": true
     }
   ]
 }
