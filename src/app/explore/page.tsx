@@ -36,6 +36,28 @@ export default async function ExplorePage() {
     error = 'Failed to load books. Please try again later.'
   }
 
+  // --- DEBUGGING ---
+  console.log('--- EXPLORE PAGE DEBUG ---')
+  console.log('DB Connection String Present:', !!process.env.DATABASE_URL)
+  console.log('Books Found:', allBooks.length)
+  if (allBooks.length === 0) {
+    // Attempt raw count to verify any books exist at all
+    try {
+        const result = await db.select({ count: books.id }).from(books);
+        console.log('Total books in DB (raw count):', result.length);
+        if (result.length > 0) {
+            console.log('Sample book:', result[0]);
+             // If books exist but query returned 0, it means isPublic=false or join failed (but we used leftJoin now)
+             // Check isPublic explicitly for one
+            const [sample] = await db.select().from(books).limit(1);
+            console.log('Sample book full data:', sample);
+        }
+    } catch(err) {
+        console.error('Debug query failed:', err);
+    }
+  }
+  // -----------------
+
   return (
     <div className={styles.container}>
       <header className={styles.header}>
