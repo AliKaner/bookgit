@@ -8,6 +8,9 @@ export default function Home() {
       <header className={styles.header}>
         <div className={styles.logo}>CollabBook</div>
         <nav className={styles.nav}>
+          <Link href="/explore" style={{ marginRight: '1.5rem', textDecoration: 'none', color: '#666' }}>
+            Explore
+          </Link>
           <Link href="/login" className={styles.ctaButton} style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}>
             Login
           </Link>
