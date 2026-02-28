@@ -33,9 +33,10 @@ export async function middleware(request: NextRequest) {
   // Auth callback must never be blocked — it has no session yet
   if (pathname.startsWith("/auth/callback")) return response;
 
-  // Protected routes: /editor, /books/*, /profile
+  // Public routes: /, /login, /books (discover), /read/*
+  // Protected routes: individual book edit, editor, profile
   const isProtected =
-    pathname.startsWith("/books") ||
+    (pathname.startsWith("/books/") && pathname !== "/books") || // /books/[id] edit
     pathname.startsWith("/editor") ||
     pathname === "/profile";
 
