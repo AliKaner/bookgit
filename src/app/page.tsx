@@ -1,13 +1,15 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { BookOpen, StickyNote, Users, Book, Settings, Plus, Pencil, Check, FileText, Globe } from "lucide-react";
+import { BookOpen, StickyNote, Users, Book, Settings, Pencil, Check, FileText, Globe, Eye } from "lucide-react";
 import { StoryEditor } from "@/components/editor/StoryEditor";
 import { CharacterPanel } from "@/components/CharacterPanel";
 import { NotesPanel } from "@/components/NotesPanel";
 import { DictionaryPanel } from "@/components/DictionaryPanel";
 import { WorldPanel } from "@/components/WorldPanel";
-import { useEditorStore, WORDS_PER_A5_PAGE } from "@/store/useEditorStore";
+import { ChapterTree } from "@/components/ChapterTree";
+import { BookPreview } from "@/components/BookPreview";
+import { useEditorStore } from "@/store/useEditorStore";
 import { cn } from "@/lib/utils";
 
 type LeftPanel = 'chapters' | 'notes' | null;
@@ -21,16 +23,14 @@ const COLOR_HEX: Record<string, string> = {
 export default function Home() {
   const {
     chapters, activeChapterId,
-    addChapter, updateChapterTitle, setActiveChapter,
+    updateChapterTitle, setActiveChapter,
     updateChapterContent,
     styles,
   } = useEditorStore();
 
   const [leftPanel, setLeftPanel] = useState<LeftPanel>('chapters');
   const [rightPanel, setRightPanel] = useState<RightPanel>('characters');
-  const [editingChapterId, setEditingChapterId] = useState<string | null>(null);
-  const [editTitle, setEditTitle] = useState('');
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   const activeChapter = chapters.find(ch => ch.id === activeChapterId) ?? chapters[0];
 
@@ -42,39 +42,20 @@ export default function Home() {
     setRightPanel(prev => prev === panel ? null : panel);
   }
 
-  function startEdit(id: string, currentTitle: string) {
-    setEditingChapterId(id);
-    setEditTitle(currentTitle);
-    setTimeout(() => inputRef.current?.focus(), 50);
-  }
-
-  function commitEdit() {
-    if (editingChapterId && editTitle.trim()) {
-      updateChapterTitle(editingChapterId, editTitle.trim());
-    }
-    setEditingChapterId(null);
-  }
-
   return (
     <div className="flex h-screen w-full bg-white dark:bg-zinc-950 overflow-hidden">
+
+      {/* Book Preview Overlay */}
+      {showPreview && <BookPreview onClose={() => setShowPreview(false)} />}
 
       {/* Sol Panel */}
       <div className={cn(
         "h-full border-r border-zinc-100 dark:border-zinc-800/60 bg-white dark:bg-zinc-950 transition-all duration-300 overflow-hidden flex-shrink-0",
         leftPanel ? "w-72" : "w-0"
       )}>
-        {leftPanel === 'chapters' && <ChaptersPanel
-          chapters={chapters}
-          activeChapterId={activeChapterId}
-          editingChapterId={editingChapterId}
-          editTitle={editTitle}
-          inputRef={inputRef}
-          onSelect={(id) => { setActiveChapter(id); setEditingChapterId(null); }}
-          onStartEdit={startEdit}
-          onCommitEdit={commitEdit}
-          onEditTitleChange={setEditTitle}
-          onAddChapter={addChapter}
-        />}
+        {leftPanel === 'chapters' && (
+          <ChapterTree onSelect={(id) => setActiveChapter(id)} />
+        )}
         {leftPanel === 'notes' && <NotesPanel />}
       </div>
 
@@ -97,8 +78,20 @@ export default function Home() {
               activeClass="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300" />
           </div>
 
-          {/* Orta: boş bırak, duplikat başlık yok */}
+          {/* Orta */}
           <div className="flex-1" />
+
+          {/* Preview Button */}
+          <button
+            onClick={() => setShowPreview(true)}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+              "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300"
+            )}
+          >
+            <Eye className="w-3.5 h-3.5" />
+            Önizleme
+          </button>
 
           {/* Sağ togglelar */}
           <div className="flex items-center gap-1">
@@ -169,61 +162,6 @@ function ToggleBtn({ active, onClick, icon, label, activeClass }: {
     )}>
       {icon}{label}
     </button>
-  );
-}
-
-function ChaptersPanel({ chapters, activeChapterId, editingChapterId, editTitle, inputRef,
-  onSelect, onStartEdit, onCommitEdit, onEditTitleChange, onAddChapter }: any) {
-  return (
-    <div className="h-full flex flex-col py-4 px-2">
-      <p className="text-[10px] uppercase tracking-widest font-semibold text-zinc-400 px-2 mb-2">Bölümler</p>
-      <div className="flex-1 space-y-0.5 overflow-y-auto">
-        {chapters.map((ch: any) => {
-          const words = ch.content
-            ? ch.content.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).filter(Boolean).length
-            : 0;
-          const pages = words > 0 ? Math.ceil(words / WORDS_PER_A5_PAGE) : 0;
-          return (
-            <div key={ch.id} onClick={() => onSelect(ch.id)}
-              className={cn(
-                "group flex flex-col w-full px-2 py-2 rounded-lg transition-colors cursor-pointer",
-                ch.id === activeChapterId
-                  ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-                  : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
-              )}>
-              {editingChapterId === ch.id ? (
-                <form onSubmit={e => { e.preventDefault(); onCommitEdit(); }} className="flex items-center gap-1">
-                  <input ref={inputRef} value={editTitle} onChange={e => onEditTitleChange(e.target.value)}
-                    onBlur={onCommitEdit} onClick={(e: any) => e.stopPropagation()}
-                    className="flex-1 text-xs bg-white dark:bg-zinc-700 rounded px-1.5 py-0.5 outline-none border border-zinc-300 dark:border-zinc-600 min-w-0" />
-                  <button type="submit" onClick={(e: any) => e.stopPropagation()}><Check className="w-3 h-3 text-zinc-500" /></button>
-                </form>
-              ) : (
-                <div className="flex items-center gap-1">
-                  <span className="flex-1 truncate text-xs font-medium">{ch.title}</span>
-                  <button onClick={(e: any) => { e.stopPropagation(); onStartEdit(ch.id, ch.title); }}
-                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all flex-shrink-0">
-                    <Pencil className="w-3 h-3 text-zinc-400" />
-                  </button>
-                </div>
-              )}
-              {/* Badge: kelime + sayfa */}
-              {words > 0 && (
-                <div className="flex gap-1.5 mt-1">
-                  <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{words} kelime</span>
-                  <span className="text-[10px] text-zinc-300 dark:text-zinc-600">·</span>
-                  <span className="text-[10px] text-zinc-400 dark:text-zinc-500">~{pages} sayfa</span>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-      <button onClick={onAddChapter}
-        className="flex items-center gap-2 w-full px-2 py-2 mt-2 rounded-lg text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors border border-dashed border-zinc-200 dark:border-zinc-700">
-        <Plus className="w-3 h-3" /> Yeni Bölüm
-      </button>
-    </div>
   );
 }
 
