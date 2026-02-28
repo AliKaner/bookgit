@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { X, Plus, Shuffle, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { useEditorStore, getNextColor, Character, COLORS } from '@/store/useEditorStore';
 import { generateRandomName } from '@/lib/randomNames';
+import { AutoTextarea } from '@/components/AutoTextarea';
 import { cn } from '@/lib/utils';
 
 const COLOR_OPTIONS = [
@@ -147,15 +148,15 @@ function CharacterCard({ char, onRemove }: { char: Character; onRemove: () => vo
               placeholder="Özellik..."
               className="w-24 text-xs bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1.5 outline-none focus:border-zinc-400 transition-colors text-zinc-700 dark:text-zinc-300 flex-shrink-0"
             />
-            <input
+            <AutoTextarea
               value={detailValue}
               onChange={e => setDetailValue(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleAddDetail()}
+              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleAddDetail())}
               placeholder="Değer..."
               className="flex-1 text-xs bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 outline-none focus:border-zinc-400 transition-colors text-zinc-700 dark:text-zinc-300 min-w-0"
             />
             <button onClick={handleAddDetail} disabled={!detailLabel.trim() || !detailValue.trim()}
-              className="p-1.5 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 disabled:opacity-40 transition-colors flex-shrink-0">
+              className="p-1.5 rounded-lg bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 disabled:opacity-40 transition-colors flex-shrink-0 self-end">
               <Plus className="w-3 h-3" />
             </button>
           </div>

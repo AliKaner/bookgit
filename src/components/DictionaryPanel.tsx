@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Plus, X, Book } from 'lucide-react';
 import { useEditorStore, getNextColor } from '@/store/useEditorStore';
+import { AutoTextarea } from '@/components/AutoTextarea';
 import { cn } from '@/lib/utils';
 
 const COLOR_OPTIONS = [
@@ -83,13 +84,12 @@ export function DictionaryPanel() {
           placeholder="Kelime..."
           className="w-full text-sm bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 outline-none focus:border-zinc-400 transition-colors text-zinc-700 dark:text-zinc-300"
         />
-        <textarea
+        <AutoTextarea
           value={meaning}
           onChange={e => setMeaning(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleAdd())}
           placeholder="Anlam veya açıklama..."
-          rows={2}
-          className="w-full text-sm bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 outline-none focus:border-zinc-400 transition-colors text-zinc-700 dark:text-zinc-300 resize-none"
+          className="w-full text-sm bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 outline-none focus:border-zinc-400 transition-colors text-zinc-700 dark:text-zinc-300"
         />
         <div className="flex gap-1.5 flex-wrap">
           {COLOR_OPTIONS.map(c => (

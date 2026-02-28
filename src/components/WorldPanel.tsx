@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Plus, X, Globe, Pencil, Check } from 'lucide-react';
 import { useEditorStore, WorldEntry } from '@/store/useEditorStore';
+import { AutoTextarea } from '@/components/AutoTextarea';
 
 // Hazır dünya kategorileri
 const PRESETS = [
@@ -80,10 +81,10 @@ export function WorldPanel() {
           placeholder="Kategori (ör. Ülke, Dönem...)"
           className="w-full text-sm bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 outline-none focus:border-zinc-400 transition-colors text-zinc-700 dark:text-zinc-300"
         />
-        <input
+        <AutoTextarea
           value={value}
           onChange={e => setValue(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleAdd()}
+          onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleAdd())}
           placeholder="Değer..."
           className="w-full text-sm bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 outline-none focus:border-zinc-400 transition-colors text-zinc-700 dark:text-zinc-300"
         />
@@ -114,7 +115,7 @@ function WorldCard({ entry, isEditing, editValue, onStartEdit, onEditChange, onC
         <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 mb-0.5">{entry.label}</div>
         {isEditing ? (
           <form onSubmit={e => { e.preventDefault(); onCommit(); }} className="flex gap-1">
-            <input
+            <AutoTextarea
               autoFocus
               value={editValue}
               onChange={e => onEditChange(e.target.value)}
