@@ -5,6 +5,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import { CharacterHighlight } from './CharacterHighlight';
+import { PageBreakDecorator } from './PageBreakDecorator';
 import { useEditorStore } from '@/store/useEditorStore';
 
 interface Props {
@@ -41,6 +42,7 @@ export function StoryEditor({ chapterId, initialContent = '', onContentChange }:
       CharacterHighlight.configure({
         characters: characters.map(c => ({ name: c.name, color: c.color })),
       }),
+      PageBreakDecorator,
     ],
     content: initialContent,
     editorProps: {

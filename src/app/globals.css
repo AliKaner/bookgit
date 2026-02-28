@@ -165,3 +165,54 @@
 .theme-sepia .dark\:bg-zinc-950 {
   background-color: #f5f0e8 !important;
 }
+
+/* A5 Sayfa Sınırı */
+.page-break-indicator {
+  display: block;
+  position: relative;
+  width: 100%;
+  height: 2em;
+  margin: 1.5em 0;
+  pointer-events: none;
+}
+.page-break-indicator::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: repeating-linear-gradient(
+    to right,
+    transparent 0px,
+    transparent 4px,
+    rgb(161 161 170 / 0.35) 4px,
+    rgb(161 161 170 / 0.35) 8px
+  );
+}
+.page-break-indicator::after {
+  content: attr(data-page) '. sayfa sonu';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  padding: 0 12px;
+  font-size: 10px;
+  color: rgb(161 161 170 / 0.7);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+.dark .page-break-indicator::after {
+  background: rgb(9 9 11);
+  color: rgb(82 82 91 / 0.8);
+}
+.dark .page-break-indicator::before {
+  background: repeating-linear-gradient(
+    to right,
+    transparent 0px,
+    transparent 4px,
+    rgb(63 63 70 / 0.5) 4px,
+    rgb(63 63 70 / 0.5) 8px
+  );
+}

@@ -1,16 +1,17 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { BookOpen, StickyNote, Users, Book, Settings, Plus, Pencil, Check, FileText } from "lucide-react";
+import { BookOpen, StickyNote, Users, Book, Settings, Plus, Pencil, Check, FileText, Globe } from "lucide-react";
 import { StoryEditor } from "@/components/editor/StoryEditor";
 import { CharacterPanel } from "@/components/CharacterPanel";
 import { NotesPanel } from "@/components/NotesPanel";
 import { DictionaryPanel } from "@/components/DictionaryPanel";
-import { useEditorStore } from "@/store/useEditorStore";
+import { WorldPanel } from "@/components/WorldPanel";
+import { useEditorStore, WORDS_PER_A5_PAGE } from "@/store/useEditorStore";
 import { cn } from "@/lib/utils";
 
 type LeftPanel = 'chapters' | 'notes' | null;
-type RightPanel = 'characters' | 'dictionary' | 'settings' | null;
+type RightPanel = 'characters' | 'dictionary' | 'world' | 'settings' | null;
 
 const COLOR_HEX: Record<string, string> = {
   blue: '#60a5fa', red: '#f87171', emerald: '#34d399', purple: '#a78bfa',
@@ -107,6 +108,9 @@ export default function Home() {
             <ToggleBtn active={rightPanel === 'dictionary'} onClick={() => handleRight('dictionary')}
               icon={<Book className="w-3.5 h-3.5" />} label="Sözlük"
               activeClass="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300" />
+            <ToggleBtn active={rightPanel === 'world'} onClick={() => handleRight('world')}
+              icon={<Globe className="w-3.5 h-3.5" />} label="Dünya"
+              activeClass="bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300" />
             <ToggleBtn active={rightPanel === 'settings'} onClick={() => handleRight('settings')}
               icon={<Settings className="w-3.5 h-3.5" />} label="Ayarlar"
               activeClass="bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200" />
@@ -146,6 +150,7 @@ export default function Home() {
       )}>
         {rightPanel === 'characters' && <CharacterPanel />}
         {rightPanel === 'dictionary' && <DictionaryPanel />}
+        {rightPanel === 'world' && <WorldPanel />}
         {rightPanel === 'settings' && <SettingsPanel colorHex={COLOR_HEX} />}
       </div>
 
@@ -177,7 +182,7 @@ function ChaptersPanel({ chapters, activeChapterId, editingChapterId, editTitle,
           const words = ch.content
             ? ch.content.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).filter(Boolean).length
             : 0;
-          const pages = Math.max(1, Math.ceil(words / 250));
+          const pages = words > 0 ? Math.ceil(words / WORDS_PER_A5_PAGE) : 0;
           return (
             <div key={ch.id} onClick={() => onSelect(ch.id)}
               className={cn(
