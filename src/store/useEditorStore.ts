@@ -17,6 +17,7 @@ export interface Chapter {
   content: string;
   parentId: string | null;  // null = root
   order: number;            // ordering among siblings
+  isCanon: boolean;         // true = part of the canon timeline
 }
 
 export interface EditorStyles {
@@ -57,6 +58,7 @@ interface EditorState {
   updateChapterContent: (id: string, content: string) => void;
   setActiveChapter: (id: string) => void;
   removeChapter: (id: string) => void;
+  setChapterCanon: (id: string) => void;  // marks as canon, unsets siblings
 
   setShowNotesPanel: (v: boolean) => void;
   setShowSettingsPanel: (v: boolean) => void;
@@ -207,7 +209,7 @@ export function flattenBranchForPreview(chapters: Chapter[], activeChapterId: st
 }
 
 export const useEditorStore = create<EditorState>((set) => ({
-  chapters: [{ id: INITIAL_CHAPTER_ID, title: 'Bölüm 1', content: '', parentId: null, order: 0 }],
+  chapters: [{ id: INITIAL_CHAPTER_ID, title: 'Chapter 1', content: '', parentId: null, order: 0, isCanon: true }],
   activeChapterId: INITIAL_CHAPTER_ID,
   characters: [],
   dictionary: [],
@@ -225,11 +227,10 @@ export const useEditorStore = create<EditorState>((set) => ({
 
   addChapter: () => set((state) => {
     const id = uid();
-    // Add a new root-level chapter (linear continuation at root level)
     const rootChapters = state.chapters.filter(c => c.parentId === null);
     const order = rootChapters.length;
     return {
-      chapters: [...state.chapters, { id, title: `Bölüm ${state.chapters.length + 1}`, content: '', parentId: null, order }],
+      chapters: [...state.chapters, { id, title: `Chapter ${state.chapters.length + 1}`, content: '', parentId: null, order, isCanon: false }],
       activeChapterId: id,
     };
   }),
@@ -238,12 +239,11 @@ export const useEditorStore = create<EditorState>((set) => ({
     const id = uid();
     const siblings = state.chapters.filter(c => c.parentId === fromChapterId);
     const order = siblings.length;
-    const parentChapter = state.chapters.find(c => c.id === fromChapterId);
     const branchNum = state.chapters.length + 1;
     return {
       chapters: [
         ...state.chapters,
-        { id, title: `Bölüm ${branchNum} (Dal)`, content: '', parentId: fromChapterId, order },
+        { id, title: `Chapter ${branchNum} (Branch)`, content: '', parentId: fromChapterId, order, isCanon: false },
       ],
       activeChapterId: id,
     };
@@ -254,10 +254,22 @@ export const useEditorStore = create<EditorState>((set) => ({
   setActiveChapter: (id) => set({ activeChapterId: id }),
   removeChapter: (id) => set((state) => {
     const remaining = state.chapters.filter(ch => ch.id !== id);
-    // Re-parent children of removed node
     const orphans = remaining.map(ch => ch.parentId === id ? { ...ch, parentId: null } : ch);
     const newActive = orphans.find(ch => ch.id !== id) ?? orphans[0];
     return { chapters: orphans, activeChapterId: newActive?.id ?? '' };
+  }),
+  // Mark a chapter as canon; unset ALL other chapters at the same parent level
+  setChapterCanon: (id) => set((state) => {
+    const target = state.chapters.find(c => c.id === id);
+    if (!target) return {};
+    return {
+      chapters: state.chapters.map(ch => {
+        if (ch.id === id) return { ...ch, isCanon: true };
+        // Unset siblings (same parentId)
+        if (ch.parentId === target.parentId) return { ...ch, isCanon: false };
+        return ch;
+      }),
+    };
   }),
 
   setShowNotesPanel: (v) => set({ showNotesPanel: v }),
