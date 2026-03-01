@@ -112,10 +112,19 @@ export interface Book {
   visibility: Visibility;
   language: string;
   parent_book_id: string | null;
+  series_id: string | null;
+  series_order: number;
   search_vector: string | null;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface Series {
+  id: string;
+  user_id: string;
+  name: string;
+  created_at: string;
 }
 
 export interface Genre {
@@ -212,5 +221,6 @@ export interface BookWithMeta extends Book {
   genres?: Genre[];
   tags?: Tag[];
   stats?: BookStats;
+  series?: Series;
   profile?: Pick<Profile, "display_name" | "username" | "avatar_url">;
 }

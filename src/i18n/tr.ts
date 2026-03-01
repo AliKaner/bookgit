@@ -35,7 +35,7 @@ const tr: Translations = {
     getStarted: "Başla",
   },
   landing: {
-    badge: "Yazarlar için tasarlandı",
+    badge: "Yazarlar tarafından tasarlandı",
     headline1: "Hikayeni dallara ayır.",
     headline2: "Canon yolu seç.",
     sub: "BookGit, yazarlar için git tarzı bir kitap yazma ortamı sunar. Bölümler arasında dallanın, karakterleri ve dünyayı yönetin, kitabınızı önizleyin.",
@@ -97,6 +97,12 @@ const tr: Translations = {
     create: "Kitap Oluştur",
     cancel: "İptal",
     charCount: "/2000",
+    series: "Seri",
+    newSeries: "Yeni Seri",
+    seriesNamePlaceholder: "Seri adı...",
+    noSeries: "Seri Yok",
+    sequelOf: "Devam Kitabı",
+    noParent: "Yok (Yeni başlangıç)",
   },
   bookCard: {
     chapters: "bölüm",

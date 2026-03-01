@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { BookOpen, StickyNote, Users, Book, Settings, FileText, Globe, Eye, Save, Loader2 } from "lucide-react";
 import { StoryEditor } from "@/components/editor/StoryEditor";
 import { CharacterPanel } from "@/components/CharacterPanel";
@@ -12,6 +12,7 @@ import { BookPreview } from "@/components/BookPreview";
 import { UserCard } from "@/components/UserCard";
 import { useEditorStore } from "@/store/useEditorStore";
 import { useTranslation, LanguageSwitcher } from "@/contexts/LanguageContext";
+import { getBookState, saveBookState } from "@/app/actions/books";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
@@ -25,30 +26,66 @@ const COLOR_HEX: Record<string, string> = {
 
 export default function EditorPage() {
   const { t } = useTranslation();
-  const { chapters, activeChapterId, updateChapterTitle, setActiveChapter, updateChapterContent, styles } = useEditorStore();
+  const state = useEditorStore();
+  const { chapters, activeChapterId, updateChapterTitle, setActiveChapter, updateChapterContent, styles, loadBookData } = state;
+  
   const [leftPanel, setLeftPanel] = useState<LeftPanel>('chapters');
   const [rightPanel, setRightPanel] = useState<RightPanel>('characters');
   const [showPreview, setShowPreview] = useState(false);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [loading, setLoading] = useState(true);
+
+  // Load data on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const bookId = params.get('bookId');
+    if (!bookId) { setLoading(false); return; }
+
+    async function load() {
+      try {
+        const data = await getBookState(bookId!);
+        if (data && !('error' in data)) {
+          loadBookData(data);
+        }
+      } catch (err) {
+        console.error("Failed to load book state:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
 
   const activeChapter = chapters.find(ch => ch.id === activeChapterId) ?? chapters[0];
 
   async function handleSave() {
-    if (!activeChapter) return;
     setSaveState('saving');
     try {
-      const { createClient } = await import("@/lib/supabase/client");
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setSaveState('idle'); return; }
       const params = new URLSearchParams(window.location.search);
       const bookId = params.get('bookId');
-      if (!bookId) { setSaveState('idle'); return; }
-      await supabase.from("chapters").update({ content: activeChapter.content, title: activeChapter.title, updated_at: new Date().toISOString() })
-        .eq("id", activeChapter.id).eq("book_id", bookId);
-      setSaveState('saved');
-      setTimeout(() => setSaveState('idle'), 2000);
-    } catch { setSaveState('idle'); }
+      if (!bookId) return;
+
+      const result = await saveBookState(bookId, state);
+      if (result && 'success' in result && result.success) {
+        setSaveState('saved');
+        setTimeout(() => setSaveState('idle'), 2000);
+      } else {
+        setSaveState('idle');
+      }
+    } catch { 
+      setSaveState('idle'); 
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-zinc-950">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 text-violet-500 animate-spin" />
+          <p className="text-zinc-400 text-sm animate-pulse">Loading book...</p>
+        </div>
+      </div>
+    );
   }
 
   return (

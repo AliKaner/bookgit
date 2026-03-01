@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS series (
 ALTER TABLE books ADD COLUMN IF NOT EXISTS series_id      UUID REFERENCES series(id) ON DELETE SET NULL;
 ALTER TABLE books ADD COLUMN IF NOT EXISTS series_order   INT  NOT NULL DEFAULT 0;
 ALTER TABLE books ADD COLUMN IF NOT EXISTS parent_book_id UUID REFERENCES books(id) ON DELETE SET NULL;
+ALTER TABLE books ADD COLUMN IF NOT EXISTS editor_settings JSONB DEFAULT '{}'::jsonb;
 
 -- Index for series lookups
 CREATE INDEX IF NOT EXISTS idx_books_series_id ON books(series_id);

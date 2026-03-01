@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useTransition, useCallback } from "react";
-import { Search, Plus, LogOut, BookOpen, Globe, Lock, X } from "lucide-react";
+import { Search, Plus, LogOut, BookOpen, Globe, Lock, X, Library } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { BookCard } from "@/components/BookCard";
 import { CreateBookDialog } from "@/components/CreateBookDialog";
 import { getMyBooks, getPublicBooks, getGenres } from "@/app/actions/books";
@@ -13,11 +14,14 @@ import { useTranslation, LanguageSwitcher } from "@/contexts/LanguageContext";
 type Feed = "mine" | "public";
 
 export default function BooksPage() {
-  const { t } = useTranslation();
+  const t = useTranslation().t;
+  const router = useRouter();
   const [feed, setFeed] = useState<Feed>("mine");
   const [search, setSearch] = useState("");
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [initialParentId, setInitialParentId] = useState<string | undefined>();
+  const [initialSeriesId, setInitialSeriesId] = useState<string | undefined>();
   const [isPending, startTransition] = useTransition();
 
   const [myBooks, setMyBooks] = useState<BookWithMeta[]>([]);
@@ -47,13 +51,39 @@ export default function BooksPage() {
   useEffect(() => { if (feed === "public") fetchPublic(); }, [feed, fetchPublic]);
 
   const displayedBooks = feed === "mine" ? myBooks : publicBooks;
-  const filteredBooks = feed === "mine"
-    ? displayedBooks.filter((b) => {
-        const matchSearch = !search || b.title.toLowerCase().includes(search.toLowerCase());
-        const matchGenre = !selectedGenre || b.genres?.some((g) => g.slug === selectedGenre);
-        return matchSearch && matchGenre;
-      })
-    : displayedBooks;
+  const filteredBooks = displayedBooks.filter((b) => {
+    const matchSearch = !search || b.title.toLowerCase().includes(search.toLowerCase());
+    const matchGenre = !selectedGenre || b.genres?.some((g) => g.slug === selectedGenre);
+    return matchSearch && matchGenre;
+  });
+
+  const handleBookAction = (action: "sequel" | "edit" | "delete", book: BookWithMeta) => {
+    if (action === "sequel") {
+      setInitialParentId(book.id);
+      setInitialSeriesId(book.series_id || undefined);
+      setShowCreate(true);
+    } else if (action === "edit") {
+      // Redirect to editor settings or similar
+      router.push(`/editor?bookId=${book.id}&settings=true`);
+    } else if (action === "delete") {
+      if (confirm(t.chapterTree.deleteConfirmMsg || "Bu kitabı silmek istediğinize emin misiniz?")) {
+        // deleteBook is imported from actions
+        import("@/app/actions/books").then(m => m.deleteBook(book.id)).then(() => {
+          setMyBooks(prev => prev.filter(b => b.id !== book.id));
+        });
+      }
+    }
+  };
+
+  // Grouping logic for "My Books"
+  const seriesGroups = feed === "mine" 
+    ? filteredBooks.reduce((acc, book) => {
+        const seriesName = book.series?.name || "Individual Stories";
+        if (!acc[seriesName]) acc[seriesName] = [];
+        acc[seriesName].push(book);
+        return acc;
+      }, {} as Record<string, BookWithMeta[]>)
+    : null;
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
@@ -154,14 +184,50 @@ export default function BooksPage() {
               </button>
             )}
           </div>
+        ) : feed === "mine" && seriesGroups ? (
+          <div className="space-y-12">
+            {Object.entries(seriesGroups).map(([name, books]) => (
+              <section key={name}>
+                <div className="flex items-center gap-3 mb-4">
+                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                    {name === "Individual Stories" ? (
+                      <BookOpen className="w-5 h-5 text-zinc-500" />
+                    ) : (
+                      <div className="w-2 h-6 bg-violet-600 rounded-full" />
+                    )}
+                    {name}
+                  </h2>
+                  <div className="h-px flex-1 bg-zinc-800" />
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {books.sort((a,b) => (a.series_order || 0) - (b.series_order || 0)).map((book) => (
+                    <BookCard key={book.id} book={book} onAction={handleBookAction} />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {filteredBooks.map((book) => <BookCard key={book.id} book={book} showAuthor={feed === "public"} />)}
+            {filteredBooks.map((book) => (
+              <BookCard key={book.id} book={book} showAuthor={feed === "public"} onAction={handleBookAction} />
+            ))}
           </div>
         )}
       </main>
 
-      {showCreate && <CreateBookDialog genres={genres} onClose={() => setShowCreate(false)} />}
+      {showCreate && (
+        <CreateBookDialog 
+          genres={genres} 
+          onClose={() => {
+            setShowCreate(false);
+            setInitialParentId(undefined);
+            setInitialSeriesId(undefined);
+          }} 
+          initialParentBookId={initialParentId}
+          initialSeriesId={initialSeriesId}
+        />
+      )}
     </div>
   );
 }

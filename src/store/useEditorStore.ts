@@ -80,6 +80,8 @@ interface EditorState {
   addWorldEntry: (entry: Omit<WorldEntry, 'id'>) => void;
   removeWorldEntry: (id: string) => void;
   updateWorldEntry: (id: string, value: string) => void;
+
+  loadBookData: (data: Partial<EditorState>) => void;
 }
 
 export const COLORS = ['blue', 'red', 'emerald', 'purple', 'amber', 'pink', 'cyan', 'orange'];
@@ -300,6 +302,14 @@ export const useEditorStore = create<EditorState>((set) => ({
   addWorldEntry: (entry) => set((state) => ({ world: [...state.world, { ...entry, id: uid() }] })),
   removeWorldEntry: (id) => set((state) => ({ world: state.world.filter(e => e.id !== id) })),
   updateWorldEntry: (id, value) => set((state) => ({ world: state.world.map(e => e.id === id ? { ...e, value } : e) })),
+
+  loadBookData: (data) => set((state) => ({
+    ...state,
+    ...data,
+    // Ensure we have at least one chapter and an active one
+    chapters: data.chapters?.length ? data.chapters : state.chapters,
+    activeChapterId: data.activeChapterId || (data.chapters?.[0]?.id || state.activeChapterId),
+  })),
 }));
 
 export function getNextColor(arr: { color: string }[]): string {

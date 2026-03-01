@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Plus, Pencil, Check, GitBranch, Trash2, List, GitCommitHorizontal } from "lucide-react";
+import { Plus, Pencil, Check, GitBranch, Trash2, List, GitCommitHorizontal, Star } from "lucide-react";
 import { useEditorStore, buildChapterTree, ChapterNode, WORDS_PER_A5_PAGE, Chapter } from "@/store/useEditorStore";
 import { cn } from "@/lib/utils";
 
@@ -27,7 +27,7 @@ export function ChapterTree({ onSelect }: ChapterTreeProps) {
   const {
     chapters, activeChapterId,
     addChapter, addBranch, updateChapterTitle,
-    setActiveChapter, removeChapter,
+    setActiveChapter, removeChapter, setChapterCanon
   } = useEditorStore();
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -150,11 +150,13 @@ export function ChapterTree({ onSelect }: ChapterTreeProps) {
               onEditTitleChange={setEditTitle}
               onBranch={handleBranch}
               onDelete={requestDelete}
+              onSetCanon={(id) => setChapterCanon(id)}
               deleteConfirmId={deleteConfirmId}
             />
           ))
         ) : (
           <GitGraphView
+            onSetCanon={(id) => setChapterCanon(id)}
             chapters={chapters}
             activeChapterId={activeChapterId}
             editingId={editingId}
@@ -196,12 +198,13 @@ interface ListBranchProps {
   onEditTitleChange: (v: string) => void;
   onBranch: (id: string, e: React.MouseEvent) => void;
   onDelete: (id: string, e: React.MouseEvent) => void;
+  onSetCanon: (id: string) => void;
   deleteConfirmId: string | null;
 }
 
 function ListBranch({
   node, depth, activeChapterId, editingId, editTitle, inputRef,
-  onSelect, onStartEdit, onCommitEdit, onEditTitleChange, onBranch, onDelete, deleteConfirmId,
+  onSelect, onStartEdit, onCommitEdit, onEditTitleChange, onBranch, onDelete, onSetCanon, deleteConfirmId,
 }: ListBranchProps) {
   const ch = node.chapter;
   const isActive = ch.id === activeChapterId;
@@ -254,6 +257,11 @@ function ListBranch({
                 className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all flex-shrink-0">
                 <Pencil className="w-3 h-3 text-zinc-400" />
               </button>
+              <button onClick={e => { e.stopPropagation(); onSetCanon(ch.id); }} title="Canon yap"
+                className={cn("p-0.5 rounded transition-all flex-shrink-0",
+                  ch.isCanon ? "text-amber-500 opacity-100" : "opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20")}>
+                <Star className={cn("w-3 h-3", ch.isCanon && "fill-current")} />
+              </button>
               <button onClick={e => onBranch(ch.id, e)} title="Dal aç"
                 className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-all flex-shrink-0">
                 <GitBranch className="w-3 h-3 text-violet-400" />
@@ -266,8 +274,13 @@ function ListBranch({
           )}
         </div>
         <div className="flex items-center gap-1.5 mt-0.5 ml-4">
-          {ch.parentId !== null && (
+          {ch.parentId !== null && !ch.isCanon && (
             <span className="text-[9px] px-1 py-0.5 rounded bg-violet-100 dark:bg-violet-900/30 text-violet-500 dark:text-violet-400 font-semibold uppercase tracking-wide">dal</span>
+          )}
+          {ch.isCanon && (
+            <span className="text-[9px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 font-semibold uppercase tracking-wide flex items-center gap-0.5">
+              <Star className="w-2 h-2 fill-current" /> canon
+            </span>
           )}
           {words > 0 && (
             <>
@@ -293,6 +306,7 @@ function ListBranch({
           onEditTitleChange={onEditTitleChange}
           onBranch={onBranch}
           onDelete={onDelete}
+          onSetCanon={onSetCanon}
           deleteConfirmId={deleteConfirmId}
         />
       ))}
@@ -314,6 +328,7 @@ interface GitGraphViewProps {
   onEditTitleChange: (v: string) => void;
   onBranch: (id: string, e: React.MouseEvent) => void;
   onDelete: (id: string, e: React.MouseEvent) => void;
+  onSetCanon: (id: string) => void;
   deleteConfirmId: string | null;
 }
 
@@ -368,7 +383,7 @@ function buildGraphRows(chapters: Chapter[]): GraphRow[] {
 
 function GitGraphView({
   chapters, activeChapterId, editingId, editTitle, inputRef,
-  onSelect, onStartEdit, onCommitEdit, onEditTitleChange, onBranch, onDelete, deleteConfirmId,
+  onSelect, onStartEdit, onCommitEdit, onEditTitleChange, onBranch, onDelete, onSetCanon, deleteConfirmId,
 }: GitGraphViewProps) {
   const rows = buildGraphRows(chapters);
   const ROW_H = 36;
@@ -409,13 +424,14 @@ function GitGraphView({
           const last = laneLast.get(lane)!;
           if (first === last) return null; // single node — stub handled separately
           const color = LANE_COLORS[lane % LANE_COLORS.length];
+          const rowHasCanon = rows.some(r => r.lane === lane && r.chapter.isCanon);
           return (
             <line
               key={`vline-${lane}`}
               x1={cx(lane)} y1={cy(first)}
               x2={cx(lane)} y2={cy(last)}
-              stroke={color}
-              strokeWidth={1.5}
+              stroke={rowHasCanon ? '#f59e0b' : color}
+              strokeWidth={rowHasCanon ? 2.5 : 1.5}
               strokeLinecap="round"
             />
           );
@@ -466,8 +482,8 @@ function GitGraphView({
               key={`branch-${row.chapter.id}`}
               d={`M ${x1b} ${y1b} C ${x2b} ${y1b}, ${x2b} ${y2b - 6}, ${x2b} ${y2b}`}
               fill="none"
-              stroke={color}
-              strokeWidth={1.5}
+              stroke={row.chapter.isCanon ? '#f59e0b' : color}
+              strokeWidth={row.chapter.isCanon ? 2.5 : 1.5}
               strokeLinecap="round"
             />
           );
@@ -481,8 +497,9 @@ function GitGraphView({
           const y = cy(i);
           return (
             <g key={`dot-${row.chapter.id}`}>
-              {isActive && <circle cx={x} cy={y} r={DOT_R + 3.5} fill={color} opacity={0.15} />}
-              <circle cx={x} cy={y} r={DOT_R} fill={color} />
+              {isActive && <circle cx={x} cy={y} r={DOT_R + 3.5} fill={row.chapter.isCanon ? '#f59e0b' : color} opacity={0.15} />}
+              <circle cx={x} cy={y} r={row.chapter.isCanon ? DOT_R + 0.5 : DOT_R} fill={row.chapter.isCanon ? '#fbbf24' : color} />
+              {row.chapter.isCanon && <path d={`M ${x} ${y-1.5} l 0.4 0.9 h 1 l -0.8 0.6 l 0.3 1 l -0.9 -0.6 l -0.9 0.6 l 0.3 -1 l -0.8 -0.6 h 1 z`} fill="#fff" transform={`scale(1.2) translate(${-x*0.16}, ${-y*0.16})`} />}
               {isActive && <circle cx={x} cy={y} r={DOT_R - 1.5} fill="#fff" opacity={0.45} />}
             </g>
           );
@@ -524,6 +541,11 @@ function GitGraphView({
                   <span className="flex-1 truncate text-[11px] font-medium" style={{ color }}>
                     {ch.title}
                   </span>
+                  <button onClick={e => { e.stopPropagation(); onSetCanon(ch.id); }} title="Canon yap"
+                    className={cn("p-0.5 rounded transition-all flex-shrink-0",
+                      ch.isCanon ? "text-amber-500 opacity-100" : "opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20")}>
+                    <Star className={cn("w-2.5 h-2.5", ch.isCanon && "fill-current")} />
+                  </button>
                   {/* Branch: primary git action – most prominent */}
                   <button onClick={e => onBranch(ch.id, e)} title="Dal aç"
                     className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-violet-500/10 hover:bg-violet-500 text-violet-400 hover:text-white transition-all flex-shrink-0">

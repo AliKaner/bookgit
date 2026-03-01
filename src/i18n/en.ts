@@ -6,7 +6,7 @@ export interface Translations {
   landing: { badge: string; headline1: string; headline2: string; sub: string; cta: string; ctaSecondary: string; featureHeading: string; footer: string; features: { branch: { title: string; desc: string }; characters: { title: string; desc: string }; world: { title: string; desc: string }; preview: { title: string; desc: string }; visibility: { title: string; desc: string }; notes: { title: string; desc: string } } };
   auth: { signIn: string; signUp: string; email: string; password: string; displayName: string; emailPlaceholder: string; namePlaceholder: string; passwordPlaceholder: string; signInBtn: string; signUpBtn: string; tagline: string; minPassword: string };
   books: { newBook: string; searchPlaceholder: string; allGenres: string; myBooks: string; discover: string; noBooks: string; noBooksSearch: string; noPublic: string; createFirst: string };
-  createBook: { title: string; bookTitle: string; bookTitlePlaceholder: string; description: string; descriptionPlaceholder: string; genre: string; tags: string; tagsPlaceholder: string; tagsHint: string; coverColor: string; coverUpload: string; visibility: string; visibilityPublic: string; visibilityPrivate: string; visibilityPublicHint: string; visibilityPrivateHint: string; create: string; cancel: string; charCount: string };
+  createBook: { title: string; bookTitle: string; bookTitlePlaceholder: string; description: string; descriptionPlaceholder: string; genre: string; tags: string; tagsPlaceholder: string; tagsHint: string; coverColor: string; coverUpload: string; visibility: string; visibilityPublic: string; visibilityPrivate: string; visibilityPublicHint: string; visibilityPrivateHint: string; create: string; cancel: string; charCount: string; series: string; newSeries: string; seriesNamePlaceholder: string; noSeries: string; sequelOf: string; noParent: string };
   bookCard: { chapters: string; branch: string; words: string; public: string; private: string };
   editor: { chapters: string; notes: string; characters: string; dictionary: string; world: string; settings: string; preview: string; save: string; saved: string; titlePlaceholder: string; settingsHeading: string; fontLabel: string; sizeLabel: string; colorLabel: string; fontSerif: string; fontSans: string; fontMono: string; sizeSmall: string; sizeMed: string; sizeLarge: string; headingTitle: string; headingBody: string; headingChars: string; headingDict: string };
   chapterTree: { chapters: string; addChapter: string; branch: string; openBranch: string; deleteChapter: string; deleteConfirmTitle: string; deleteConfirmMsg: string; deleteConfirmBtn: string; listView: string; graphView: string; words: string; pages: string; editTitle: string; editDone: string };
@@ -61,7 +61,7 @@ const en: Translations = {
 
   // ── Landing Page ─────────────────────────────────────────
   landing: {
-    badge: "Built for writers",
+    badge: "Built for writers by writers",
     headline1: "Branch your story.",
     headline2: "Choose the canon.",
     sub: "BookGit is a git-style writing environment for authors. Branch between chapters, manage characters and world, and preview your book.",
@@ -129,6 +129,12 @@ const en: Translations = {
     create: "Create Book",
     cancel: "Cancel",
     charCount: "/2000",
+    series: "Series",
+    newSeries: "New Series",
+    seriesNamePlaceholder: "Series name...",
+    noSeries: "No Series",
+    sequelOf: "Sequel Of",
+    noParent: "None (Fresh start)",
   },
 
   // ── Book Card ────────────────────────────────────────────

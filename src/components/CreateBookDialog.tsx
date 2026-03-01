@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useTransition } from "react";
+import { useState, useRef, useTransition, useEffect } from "react";
 import { X, Plus, Globe, Lock, Loader2, Upload, Palette } from "lucide-react";
-import { createBook, type CreateBookInput } from "@/app/actions/books";
-import type { Genre } from "@/types/supabase";
+import { createBook, type CreateBookInput, getUserSeries, createSeries, getMyBooks, uploadBookCover } from "@/app/actions/books";
+import type { Genre, BookWithMeta } from "@/types/supabase";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "@/contexts/LanguageContext";
@@ -14,9 +14,14 @@ const COVER_COLORS = [
   "#450a0a","#1c0533","#0c1a0e","#1a0a2e","#0a1628",
 ];
 
-interface Props { genres: Genre[]; onClose: () => void; }
+interface Props { 
+  genres: Genre[]; 
+  onClose: () => void;
+  initialParentBookId?: string;
+  initialSeriesId?: string;
+}
 
-export function CreateBookDialog({ genres, onClose }: Props) {
+export function CreateBookDialog({ genres, onClose, initialParentBookId, initialSeriesId }: Props) {
   const { t } = useTranslation();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -30,7 +35,22 @@ export function CreateBookDialog({ genres, onClose }: Props) {
   const [coverColor, setCoverColor] = useState(COVER_COLORS[0]);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [series, setSeries] = useState<{id: string, name: string}[]>([]);
+  const [selectedSeriesId, setSelectedSeriesId] = useState<string>(initialSeriesId || "");
+  const [newSeriesName, setNewSeriesName] = useState("");
+  const [showNewSeries, setShowNewSeries] = useState(false);
+  const [myBooks, setMyBooks] = useState<BookWithMeta[]>([]);
+  const [parentBookId, setParentBookId] = useState<string>(initialParentBookId || "");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    async function loadData() {
+      const [sData, bData] = await Promise.all([getUserSeries(), getMyBooks()]);
+      setSeries(sData);
+      setMyBooks(bData);
+    }
+    loadData();
+  }, []);
 
   function toggleGenre(id: number) {
     setSelectedGenres((prev) => prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]);
@@ -56,14 +76,25 @@ export function CreateBookDialog({ genres, onClose }: Props) {
     if (!title.trim()) return;
     setError(null);
     startTransition(async () => {
-      const input: CreateBookInput = { title, description, coverColor, visibility, genreIds: selectedGenres, tagNames: tags };
+      let finalSeriesId = selectedSeriesId;
+      if (showNewSeries && newSeriesName.trim()) {
+        const sRes = await createSeries(newSeriesName);
+        if (sRes.error) { setError(sRes.error); return; }
+        if (sRes.series) finalSeriesId = sRes.series.id;
+      }
+
+      const input: CreateBookInput = { 
+        title, description, coverColor, visibility, 
+        genreIds: selectedGenres, tagNames: tags,
+        seriesId: finalSeriesId || undefined,
+        parentBookId: parentBookId || undefined
+      };
       const result = await createBook(input);
       if (result.error) { setError(result.error); return; }
       if (coverFile && result.bookId) {
-        const { uploadBookCover } = await import("@/app/actions/books");
         await uploadBookCover(result.bookId, coverFile);
       }
-      router.push(`/books/${result.bookId}`);
+      router.push(`/editor?bookId=${result.bookId}`);
     });
   }
 
@@ -167,7 +198,38 @@ export function CreateBookDialog({ genres, onClose }: Props) {
                   />
                 )}
               </div>
-              <p className="text-[10px] text-zinc-600 mt-1">{t.createBook.tagsHint}</p>
+            </div>
+
+            {/* Series & Sequel */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5 flex items-center justify-between">
+                  <span>{t.createBook.series || "Series"}</span>
+                  <button type="button" onClick={() => setShowNewSeries(!showNewSeries)} className="text-violet-400 hover:text-violet-300">
+                    {showNewSeries ? t.createBook.cancel : t.createBook.newSeries || "+ New"}
+                  </button>
+                </label>
+                {showNewSeries ? (
+                  <input value={newSeriesName} onChange={(e) => setNewSeriesName(e.target.value)}
+                    placeholder={t.createBook.seriesNamePlaceholder || "Series name..."}
+                    className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-violet-500/50 text-white text-sm outline-none" />
+                ) : (
+                  <select value={selectedSeriesId} onChange={(e) => setSelectedSeriesId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-sm outline-none focus:border-violet-500 transition">
+                    <option value="">{t.createBook.noSeries || "None"}</option>
+                    {series.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-400 mb-1.5">{t.createBook.sequelOf || "Sequel Of"}</label>
+                <select value={parentBookId} onChange={(e) => setParentBookId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-white text-sm outline-none focus:border-violet-500 transition">
+                  <option value="">{t.createBook.noParent || "None (Fresh start)"}</option>
+                  {myBooks.map(b => <option key={b.id} value={b.id}>{b.title}</option>)}
+                </select>
+                {parentBookId && <p className="text-[10px] text-violet-400 mt-1">Characters, World, and Dictionary will be inherited.</p>}
+              </div>
             </div>
 
             {/* Visibility */}
