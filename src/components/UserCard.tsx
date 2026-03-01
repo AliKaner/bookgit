@@ -12,9 +12,9 @@ export function UserCard({ variant = "header" }: { variant?: "header" | "sidebar
   const { t } = useTranslation();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [open, setOpen] = useState(false);
-  const supabase = createClient();
 
   useEffect(() => {
+    const supabase = createClient();
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
