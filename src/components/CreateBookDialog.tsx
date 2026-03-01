@@ -92,7 +92,9 @@ export function CreateBookDialog({ genres, onClose, initialParentBookId, initial
       const result = await createBook(input);
       if (result.error) { setError(result.error); return; }
       if (coverFile && result.bookId) {
-        await uploadBookCover(result.bookId, coverFile);
+        const formData = new FormData();
+        formData.append("file", coverFile);
+        await uploadBookCover(result.bookId, formData);
       }
       router.push(`/editor?bookId=${result.bookId}`);
     });

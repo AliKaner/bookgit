@@ -5,6 +5,7 @@ import { Plus, Pencil, Check, GitBranch, Trash2, List, GitCommitHorizontal, Star
 import { Gitgraph, TemplateName, templateExtend } from "@gitgraph/react";
 import { useEditorStore, buildChapterTree, ChapterNode, WORDS_PER_A5_PAGE, Chapter } from "@/store/useEditorStore";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 // Per-branch lane colors
 const LANE_COLORS = [
@@ -25,6 +26,7 @@ interface ChapterTreeProps {
 }
 
 export function ChapterTree({ onSelect }: ChapterTreeProps) {
+  const { t } = useTranslation();
   const {
     chapters, activeChapterId,
     addChapter, addBranch, updateChapterTitle,
@@ -77,11 +79,11 @@ export function ChapterTree({ onSelect }: ChapterTreeProps) {
     <div className="h-full flex flex-col py-3 px-3">
       {/* Header */}
       <div className="flex items-center justify-between px-1 mb-3">
-        <p className="text-[10px] uppercase tracking-widest font-semibold text-zinc-400">Bölümler</p>
+        <p className="text-[10px] uppercase tracking-widest font-semibold text-zinc-400">{t.chapterTree.chapters}</p>
         <div className="flex items-center gap-0.5 p-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800">
           <button
             onClick={() => setViewMode('list')}
-            title="Liste görünümü"
+            title={t.chapterTree.listView}
             className={cn(
               "p-1 rounded transition-all",
               viewMode === 'list'
@@ -93,7 +95,7 @@ export function ChapterTree({ onSelect }: ChapterTreeProps) {
           </button>
           <button
             onClick={() => setViewMode('graph')}
-            title="Git graph görünümü"
+            title={t.chapterTree.graphView}
             className={cn(
               "p-1 rounded transition-all",
               viewMode === 'graph'
@@ -112,22 +114,22 @@ export function ChapterTree({ onSelect }: ChapterTreeProps) {
           className="mx-1 mb-3 p-3 rounded-lg border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/30"
           onClick={e => e.stopPropagation()}
         >
-          <p className="text-xs font-medium text-red-700 dark:text-red-400 mb-1">Bölümü sil?</p>
+          <p className="text-xs font-medium text-red-700 dark:text-red-400 mb-1">{t.chapterTree.deleteConfirmTitle}</p>
           <p className="text-[11px] text-red-600/70 dark:text-red-500/70 mb-2.5 leading-snug">
-            &ldquo;{deletingChapter?.title}&rdquo; kalıcı olarak silinecek.
+            &ldquo;{deletingChapter?.title}&rdquo; {t.chapterTree.deleteConfirmMsg}
           </p>
           <div className="flex gap-1.5">
             <button
               onClick={confirmDelete}
               className="flex-1 py-1 text-[11px] font-medium rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors"
             >
-              Sil
+              {t.chapterTree.deleteConfirmBtn}
             </button>
             <button
               onClick={() => setDeleteConfirmId(null)}
               className="flex-1 py-1 text-[11px] font-medium rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
             >
-              İptal
+              {t.common.cancel}
             </button>
           </div>
         </div>
@@ -168,7 +170,7 @@ export function ChapterTree({ onSelect }: ChapterTreeProps) {
         onClick={addChapter}
         className="flex items-center gap-2 w-full px-2 py-2 mt-3 rounded-lg text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors border border-dashed border-zinc-200 dark:border-zinc-700"
       >
-        <Plus className="w-3 h-3" /> Yeni Bölüm
+        <Plus className="w-3 h-3" /> {t.chapterTree.addChapter}
       </button>
     </div>
   );
@@ -197,6 +199,7 @@ function ListBranch({
   node, depth, activeChapterId, editingId, editTitle, inputRef,
   onSelect, onStartEdit, onCommitEdit, onEditTitleChange, onBranch, onDelete, onSetCanon, deleteConfirmId,
 }: ListBranchProps) {
+  const { t } = useTranslation();
   const ch = node.chapter;
   const isActive = ch.id === activeChapterId;
   const isEditing = editingId === ch.id;
@@ -248,16 +251,16 @@ function ListBranch({
                 className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all flex-shrink-0">
                 <Pencil className="w-3 h-3 text-zinc-400" />
               </button>
-              <button onClick={e => { e.stopPropagation(); onSetCanon(ch.id); }} title="Canon yap/çıkar"
+              <button onClick={e => { e.stopPropagation(); onSetCanon(ch.id); }} title={t.chapterTree.makeCanon}
                   className={cn("p-0.5 rounded transition-all flex-shrink-0",
                     ch.isCanon ? "text-amber-500 opacity-100" : "opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20")}>
                 <Star className={cn("w-3 h-3", ch.isCanon && "fill-current")} />
               </button>
-              <button onClick={e => onBranch(ch.id, e)} title="Dal aç"
+              <button onClick={e => onBranch(ch.id, e)} title={t.chapterTree.openBranch}
                 className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-violet-100 dark:hover:bg-violet-900/30 transition-all flex-shrink-0">
                 <GitBranch className="w-3 h-3 text-violet-400" />
               </button>
-              <button onClick={e => onDelete(ch.id, e)} title="Sil"
+              <button onClick={e => onDelete(ch.id, e)} title={t.chapterTree.deleteChapter}
                 className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 transition-all flex-shrink-0">
                 <Trash2 className="w-3 h-3 text-red-400" />
               </button>
@@ -266,7 +269,7 @@ function ListBranch({
         </div>
         <div className="flex items-center gap-1.5 mt-0.5 ml-4">
           {ch.parentId !== null && !ch.isCanon && (
-            <span className="text-[9px] px-1 py-0.5 rounded bg-violet-100 dark:bg-violet-900/30 text-violet-500 dark:text-violet-400 font-semibold uppercase tracking-wide">dal</span>
+            <span className="text-[9px] px-1 py-0.5 rounded bg-violet-100 dark:bg-violet-900/30 text-violet-500 dark:text-violet-400 font-semibold uppercase tracking-wide">{t.chapterTree.branch}</span>
           )}
           {ch.isCanon && (
             <span className="text-[9px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 font-semibold uppercase tracking-wide flex items-center gap-0.5">
@@ -275,9 +278,9 @@ function ListBranch({
           )}
           {words > 0 && (
             <>
-              <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{words} kelime</span>
+              <span className="text-[10px] text-zinc-400 dark:text-zinc-500">{words} {t.chapterTree.wordsLabel}</span>
               <span className="text-[10px] text-zinc-300 dark:text-zinc-600">·</span>
-              <span className="text-[10px] text-zinc-400 dark:text-zinc-500">~{pages} sayfa</span>
+              <span className="text-[10px] text-zinc-400 dark:text-zinc-500">~{pages} {t.chapterTree.pagesLabel}</span>
             </>
           )}
         </div>
@@ -346,7 +349,7 @@ export function GitGraphView({ chapters, activeChapterId, onSelect }: GitGraphVi
           const renderNodes = (nodes: ChapterNode[], branch: any) => {
             nodes.sort((a, b) => a.chapter.order - b.chapter.order);
 
-            nodes.forEach((node, index) => {
+            nodes.forEach((node) => {
               const ch = node.chapter;
               const isActive = ch.id === activeChapterId;
 
@@ -365,7 +368,6 @@ export function GitGraphView({ chapters, activeChapterId, onSelect }: GitGraphVi
                       fontWeight: isActive ? 600 : 500,
                       cursor: 'pointer',
                       transition: 'all 0.2s',
-                      filter: isActive ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))' : 'none'
                     }}
                     onClick={() => onSelect(ch.id)}
                   >
@@ -373,32 +375,29 @@ export function GitGraphView({ chapters, activeChapterId, onSelect }: GitGraphVi
                     {ch.isCanon && " ⭐"}
                   </text>
                 ),
-                style: {
-                  dot: {
-                    strokeWidth: isActive ? 4 : 2,
-                    strokeColor: isActive ? (document.documentElement.classList.contains('dark') ? '#f4f4f5' : '#18181b') : undefined
-                  }
-                }
               });
 
               if (node.children.length > 0) {
-                // Find canon child to continue the branch
+                // To avoid visual stacking of parallel branches, we need to be careful.
+                // In Gitgraph, the "main" flow continues, while side branches are spawned.
+                
+                // 1. Separate children into Canon/Primary and others
                 const canonIndex = node.children.findIndex(c => c.chapter.isCanon);
                 const primaryIndex = canonIndex !== -1 ? canonIndex : 0;
 
                 const primaryChild = node.children[primaryIndex];
-                const otherChildren = node.children.filter((_, i) => i !== primaryIndex);
+                const sideChildren = node.children.filter((_, i) => i !== primaryIndex);
 
-                // 1. Other children create branches
-                otherChildren.forEach(child => {
-                  const newBranch = gitgraph.branch({
+                // 2. Spawn side branches first
+                sideChildren.forEach(child => {
+                  const sBranch = gitgraph.branch({
                     name: child.chapter.id,
                     style: { label: { display: false } }
                   });
-                  renderNodes([child], newBranch);
+                  renderNodes([child], sBranch);
                 });
 
-                // 2. Primary child continues this branch
+                // 3. Continue current branch with primary child
                 renderNodes([primaryChild], branch);
               }
             });
@@ -406,11 +405,14 @@ export function GitGraphView({ chapters, activeChapterId, onSelect }: GitGraphVi
 
           const roots = tree;
           if (roots.length > 0) {
-            const main = gitgraph.branch({
-              name: "main",
-              style: { label: { display: false } }
+            // If we have multiple roots, spawn parallel branches for each root
+            roots.forEach((root, i) => {
+              const branch = gitgraph.branch({
+                name: `root-${i}`,
+                style: { label: { display: false } }
+              });
+              renderNodes([root], branch);
             });
-            renderNodes(roots, main);
           }
         }}
       </Gitgraph>

@@ -300,10 +300,13 @@ export async function updateBookVisibility(bookId: string, visibility: Visibilit
 }
 
 // ─── Upload Cover Image ───────────────────────────────────────
-export async function uploadBookCover(bookId: string, file: File) {
+export async function uploadBookCover(bookId: string, formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
+
+  const file = formData.get("file") as File;
+  if (!file) return { error: "No file provided" };
 
   const ext = file.name.split(".").pop() ?? "jpg";
   const path = `${user.id}/${bookId}/cover.${ext}`;

@@ -8,15 +8,15 @@ export interface Translations {
   books: { newBook: string; searchPlaceholder: string; allGenres: string; myBooks: string; discover: string; noBooks: string; noBooksSearch: string; noPublic: string; createFirst: string };
   createBook: { title: string; bookTitle: string; bookTitlePlaceholder: string; description: string; descriptionPlaceholder: string; genre: string; tags: string; tagsPlaceholder: string; tagsHint: string; coverColor: string; coverUpload: string; visibility: string; visibilityPublic: string; visibilityPrivate: string; visibilityPublicHint: string; visibilityPrivateHint: string; create: string; cancel: string; charCount: string; series: string; newSeries: string; seriesNamePlaceholder: string; noSeries: string; sequelOf: string; noParent: string };
   bookCard: { chapters: string; branch: string; words: string; public: string; private: string };
-  editor: { chapters: string; notes: string; characters: string; dictionary: string; world: string; settings: string; preview: string; save: string; saved: string; titlePlaceholder: string; settingsHeading: string; fontLabel: string; sizeLabel: string; colorLabel: string; fontSerif: string; fontSans: string; fontMono: string; sizeSmall: string; sizeMed: string; sizeLarge: string; headingTitle: string; headingBody: string; headingChars: string; headingDict: string };
-  chapterTree: { chapters: string; addChapter: string; branch: string; openBranch: string; deleteChapter: string; deleteConfirmTitle: string; deleteConfirmMsg: string; deleteConfirmBtn: string; listView: string; graphView: string; words: string; pages: string; editTitle: string; editDone: string };
-  characters: { title: string; searchPlaceholder: string; addName: string; addRole: string; addBtn: string; noCharacters: string; detailKey: string; detailValue: string; addDetail: string };
-  notes: { title: string; addNote: string; noteTitlePlaceholder: string; noteContentPlaceholder: string; noNotes: string };
+  editor: { chapters: string; notes: string; characters: string; dictionary: string; world: string; settings: string; preview: string; save: string; saved: string; titlePlaceholder: string; settingsHeading: string; fontLabel: string; sizeLabel: string; colorLabel: string; fontSerif: string; fontSans: string; fontMono: string; sizeSmall: string; sizeMed: string; sizeLarge: string; headingTitle: string; headingBody: string; headingChars: string; headingDict: string; headingEditor: string; autosave: string; autosaveOff: string; minute: string };
+  chapterTree: { chapters: string; addChapter: string; branch: string; openBranch: string; deleteChapter: string; deleteConfirmTitle: string; deleteConfirmMsg: string; deleteConfirmBtn: string; listView: string; graphView: string; wordsLabel: string; pagesLabel: string; wordsAbbr: string; pagesAbbr: string; editTitle: string; editDone: string; makeCanon: string };
+  characters: { title: string; searchPlaceholder: string; addName: string; addRole: string; addBtn: string; noCharacters: string; detailKey: string; detailValue: string; addDetail: string; defaultRole: string };
+  notes: { title: string; addNote: string; noteTitlePlaceholder: string; noteContentPlaceholder: string; noNotes: string; defaultTitle: string };
   dictionary: { title: string; searchPlaceholder: string; addWord: string; addMeaning: string; addBtn: string; noEntries: string };
-  world: { title: string; addLabel: string; addValue: string; addBtn: string; noEntries: string; presets: { country: string; region: string; capital: string; history: string; magic: string; language: string; religion: string; technology: string } };
+  world: { title: string; subtitle: string; addLabel: string; addValue: string; addBtn: string; noEntries: string; categories: { country: string; region: string; city: string; history: string; worldName: string; government: string; currency: string; language: string; religion: string; tech: string; climate: string; place: string; event: string } };
   profile: { title: string; displayNamePlaceholder: string; bioPlaceholder: string; books: string; shared: string; publicBooks: string; privateBooks: string; noBooks: string; createLink: string; saveProfile: string; editProfile: string; myBooks: string };
   userCard: { writer: string; myBooks: string; profile: string; signOut: string };
-  preview: { page: string; of: string; noContent: string; close: string };
+  preview: { title: string; page: string; of: string; noContent: string; close: string };
   genres: { fantasy: string; sci_fi: string; mystery: string; thriller: string; romance: string; historical: string; horror: string; adventure: string; literary_fiction: string; young_adult: string; childrens: string; dystopia: string; paranormal: string; crime: string; poetry: string; biography: string; self_help: string; graphic_novel: string };
 }
 
@@ -172,6 +172,10 @@ const en: Translations = {
     headingBody: "Body",
     headingChars: "Character Highlights",
     headingDict: "Dictionary Terms",
+    headingEditor: "Editor",
+    autosave: "Autosave",
+    autosaveOff: "Off",
+    minute: "min",
   },
 
   // ── Chapter Tree ─────────────────────────────────────────
@@ -186,10 +190,13 @@ const en: Translations = {
     deleteConfirmBtn: "Delete",
     listView: "List view",
     graphView: "Git graph view",
-    words: "w",
-    pages: "p",
+    wordsLabel: "words",
+    pagesLabel: "pages",
+    wordsAbbr: "w",
+    pagesAbbr: "p",
     editTitle: "Edit title",
     editDone: "Done",
+    makeCanon: "Make/Remove Canon",
   },
 
   // ── Characters Panel ─────────────────────────────────────
@@ -203,6 +210,7 @@ const en: Translations = {
     detailKey: "Detail (e.g. age, weapon…)",
     detailValue: "Value",
     addDetail: "Add Detail",
+    defaultRole: "Character",
   },
 
   // ── Notes Panel ──────────────────────────────────────────
@@ -212,6 +220,7 @@ const en: Translations = {
     noteTitlePlaceholder: "Note title…",
     noteContentPlaceholder: "Write your note here…",
     noNotes: "No notes yet.",
+    defaultTitle: "New Note",
   },
 
   // ── Dictionary Panel ─────────────────────────────────────
@@ -227,19 +236,25 @@ const en: Translations = {
   // ── World Panel ──────────────────────────────────────────
   world: {
     title: "World",
+    subtitle: "Add information about the universe where your book takes place",
     addLabel: "Label…",
     addValue: "Value…",
     addBtn: "Add",
     noEntries: "No world entries yet.",
-    presets: {
+    categories: {
       country: "Country",
       region: "Region",
-      capital: "Capital",
-      history: "History",
-      magic: "Magic System",
+      city: "City",
+      history: "Era / History",
+      worldName: "World Name",
+      government: "Government",
+      currency: "Currency",
       language: "Language",
-      religion: "Religion",
-      technology: "Technology Level",
+      religion: "Religion / Belief",
+      tech: "Technology Level",
+      climate: "Climate",
+      place: "Important Place",
+      event: "Historical Event",
     },
   },
 
@@ -269,6 +284,7 @@ const en: Translations = {
 
   // ── Book Preview ─────────────────────────────────────────
   preview: {
+    title: "Book Preview",
     page: "Page",
     of: "of",
     noContent: "No content to preview.",

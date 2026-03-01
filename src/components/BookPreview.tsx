@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useLayoutEffect } from "react";
 import { X, BookOpen, ChevronLeft, ChevronRight } from "lucide-react";
 import { useEditorStore, WORDS_PER_A5_PAGE } from "@/store/useEditorStore";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/contexts/LanguageContext";
 
 // A5 page dimensions in px (at 96dpi: 148mm=559px, 210mm=794px, but we'll use a fixed display size)
 // We'll render at a fixed height and derive width from A5 ratio
@@ -112,6 +113,7 @@ interface BookPreviewProps {
 }
 
 export function BookPreview({ onClose }: BookPreviewProps) {
+  const { t } = useTranslation();
   const { chapters, styles } = useEditorStore();
   const [spread, setSpread] = useState(0);
 
@@ -149,9 +151,9 @@ export function BookPreview({ onClose }: BookPreviewProps) {
       >
         <div className="flex items-center gap-2 text-zinc-300">
           <BookOpen className="w-4 h-4" />
-          <span className="text-sm font-medium">Kitap Önizleme</span>
+          <span className="text-sm font-medium">{t.preview.title}</span>
           <span className="text-xs text-zinc-500 ml-2">
-            {spread * 2 + 1}–{Math.min(spread * 2 + 2, allPages.length)} / {allPages.length} sayfa
+            {spread * 2 + 1}–{Math.min(spread * 2 + 2, allPages.length)} {t.preview.of} {allPages.length} {t.preview.page}
           </span>
         </div>
         <button

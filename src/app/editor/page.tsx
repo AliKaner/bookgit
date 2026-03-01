@@ -72,6 +72,11 @@ export default function EditorPage() {
         return;
       }
 
+      if (loading) {
+        console.warn("Save aborted: Book still loading");
+        return;
+      }
+
       // Clean payload: only send serializable data, no functions
       const payload = {
         chapters: currentState.chapters,
@@ -111,11 +116,11 @@ export default function EditorPage() {
       return;
     }
     const timer = setTimeout(() => {
-      console.log("[Reactive] Triggering save due to panel change...");
+      console.log("[Reactive] Triggering save due to content/panel change...");
       handleSave(false);
-    }, 500); // 500ms for faster response
+    }, 1000); // 1s debounce
     return () => clearTimeout(timer);
-  }, [characters, dictionary, world, notes]);
+  }, [characters, dictionary, world, notes, chapters, activeChapterId]);
 
   // Autosave Timer (Legacy interval-based fallback for the editor content itself)
   useEffect(() => {
@@ -279,17 +284,17 @@ function SettingsPanel({ colorHex }: { colorHex: Record<string, string> }) {
         <StyleRow label={t.editor.sizeLabel}><BtnGroup options={SIZES} value={styles.bodySize} onChange={v => setStyle('bodySize', v)} /></StyleRow>
         <StyleRow label={t.editor.colorLabel}><ColorPicker colors={TEXT_COLORS} value={styles.bodyColor} onChange={v => setStyle('bodyColor', v)} /></StyleRow>
       </StyleGroup>
-      <StyleGroup title="Editor">
-        <StyleRow label="Autosave">
+      <StyleGroup title={t.editor.headingEditor}>
+        <StyleRow label={t.editor.autosave}>
           <select 
             value={styles.autosaveInterval} 
             onChange={e => setStyle('autosaveInterval', Number(e.target.value))}
             className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 text-xs outline-none text-zinc-700 dark:text-zinc-200"
           >
-            <option value="0">Off</option>
-            <option value="1">1 min</option>
-            <option value="2">2 min</option>
-            <option value="5">5 min</option>
+            <option value="0">{t.editor.autosaveOff}</option>
+            <option value="1">1 {t.editor.minute}</option>
+            <option value="2">2 {t.editor.minute}</option>
+            <option value="5">5 {t.editor.minute}</option>
           </select>
         </StyleRow>
       </StyleGroup>

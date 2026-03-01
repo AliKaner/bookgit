@@ -3,13 +3,15 @@
 import { useState } from 'react';
 import { Plus, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
 import { useEditorStore, Note } from '@/store/useEditorStore';
+import { useTranslation } from '@/contexts/LanguageContext';
 
 export function NotesPanel() {
+  const { t } = useTranslation();
   const { notes, addNote, removeNote } = useEditorStore();
   const [newTitle, setNewTitle] = useState('');
 
   const handleAdd = () => {
-    const title = newTitle.trim() || 'Yeni Not';
+    const title = newTitle.trim() || t.notes.defaultTitle;
     addNote(title);
     setNewTitle('');
   };
@@ -18,13 +20,13 @@ export function NotesPanel() {
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="px-4 pt-5 pb-3 border-b border-zinc-100 dark:border-zinc-800">
-        <h2 className="font-semibold text-sm text-zinc-800 dark:text-zinc-200 mb-3">Notlar</h2>
+        <h2 className="font-semibold text-sm text-zinc-800 dark:text-zinc-200 mb-3">{t.notes.title}</h2>
         <div className="flex gap-2">
           <input
             value={newTitle}
             onChange={e => setNewTitle(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleAdd()}
-            placeholder="Not başlığı..."
+            placeholder={t.notes.noteTitlePlaceholder}
             className="flex-1 text-sm bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 outline-none focus:border-zinc-400 dark:focus:border-zinc-500 transition-colors text-zinc-700 dark:text-zinc-300"
           />
           <button
@@ -39,7 +41,7 @@ export function NotesPanel() {
       {/* Not Listesi */}
       <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1.5">
         {notes.length === 0 && (
-          <p className="text-xs text-zinc-400 text-center mt-10">Henüz not yok</p>
+          <p className="text-xs text-zinc-400 text-center mt-10">{t.notes.noNotes}</p>
         )}
         {notes.map(note => (
           <NoteCard key={note.id} note={note} onRemove={() => removeNote(note.id)} />
@@ -50,6 +52,7 @@ export function NotesPanel() {
 }
 
 function NoteCard({ note, onRemove }: { note: Note; onRemove: () => void }) {
+  const { t } = useTranslation();
   const { updateNote, updateNoteTitle } = useEditorStore();
   const [expanded, setExpanded] = useState(false);
 
@@ -87,7 +90,7 @@ function NoteCard({ note, onRemove }: { note: Note; onRemove: () => void }) {
           <textarea
             value={note.content}
             onChange={e => updateNote(note.id, e.target.value)}
-            placeholder="Notlarını buraya yaz..."
+            placeholder={t.notes.noteContentPlaceholder}
             rows={5}
             className="w-full text-sm text-zinc-700 dark:text-zinc-300 bg-transparent outline-none resize-none leading-relaxed placeholder-zinc-400"
           />

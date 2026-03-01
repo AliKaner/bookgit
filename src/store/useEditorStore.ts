@@ -58,6 +58,8 @@ interface EditorState {
   addBranch: (fromChapterId: string) => void;
   updateChapterTitle: (id: string, title: string) => void;
   updateChapterContent: (id: string, content: string) => void;
+  updateCharacter: (id: string, updates: Partial<Omit<Character, 'id' | 'details'>>) => void;
+  updateDictionaryEntry: (id: string, updates: Partial<Omit<DictionaryEntry, 'id'>>) => void;
   setActiveChapter: (id: string) => void;
   removeChapter: (id: string) => void;
   setChapterCanon: (id: string) => void;  // marks as canon, unsets siblings
@@ -305,6 +307,32 @@ export const useEditorStore = create<EditorState>((set) => ({
   setShowDictionaryPanel: (v) => set({ showDictionaryPanel: v }),
 
   addCharacter: (char) => set((state) => ({ characters: [...state.characters, { ...char, id: uid(), details: [] }] })),
+
+  updateCharacter: (id, updates) => set((state) => {
+    const char = state.characters.find(c => c.id === id);
+    if (!char) return {};
+
+    let newChapters = state.chapters;
+    // Eğer isim değişiyorsa, tüm bölümlerde refactor yap
+    if (updates.name && updates.name !== char.name) {
+      const oldName = char.name.trim();
+      const newName = updates.name.trim();
+      if (oldName && newName) {
+        // Look for @Name (case sensitive or bound to @)
+        const regex = new RegExp(`@${oldName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g');
+        newChapters = state.chapters.map(ch => ({
+          ...ch,
+          content: ch.content.replace(regex, `@${newName}`)
+        }));
+      }
+    }
+
+    return {
+      characters: state.characters.map(c => c.id === id ? { ...c, ...updates } : c),
+      chapters: newChapters
+    };
+  }),
+
   removeCharacter: (id) => set((state) => ({ characters: state.characters.filter(c => c.id !== id) })),
   addDetail: (characterId, detail) => set((state) => ({
     characters: state.characters.map(c =>
@@ -318,6 +346,30 @@ export const useEditorStore = create<EditorState>((set) => ({
   })),
 
   addDictionaryEntry: (entry) => set((state) => ({ dictionary: [...state.dictionary, { ...entry, id: uid() }] })),
+
+  updateDictionaryEntry: (id, updates) => set((state) => {
+    const entry = state.dictionary.find(e => e.id === id);
+    if (!entry) return {};
+
+    let newChapters = state.chapters;
+    if (updates.word && updates.word !== entry.word) {
+      const oldWord = entry.word.trim();
+      const newWord = updates.word.trim();
+      if (oldWord && newWord) {
+        const regex = new RegExp(`@${oldWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g');
+        newChapters = state.chapters.map(ch => ({
+          ...ch,
+          content: ch.content.replace(regex, `@${newWord}`)
+        }));
+      }
+    }
+
+    return {
+      dictionary: state.dictionary.map(e => e.id === id ? { ...e, ...updates } : e),
+      chapters: newChapters
+    };
+  }),
+
   removeDictionaryEntry: (id) => set((state) => ({ dictionary: state.dictionary.filter(e => e.id !== id) })),
 
   addNote: (title) => set((state) => ({ notes: [...state.notes, { id: uid(), title, content: '', createdAt: new Date().toLocaleDateString('tr-TR') }] })),
@@ -327,7 +379,27 @@ export const useEditorStore = create<EditorState>((set) => ({
 
   addWorldEntry: (entry) => set((state) => ({ world: [...state.world, { ...entry, id: uid() }] })),
   removeWorldEntry: (id) => set((state) => ({ world: state.world.filter(e => e.id !== id) })),
-  updateWorldEntry: (id, value) => set((state) => ({ world: state.world.map(e => e.id === id ? { ...e, value } : e) })),
+  updateWorldEntry: (id, value) => set((state) => {
+    const entry = state.world.find(e => e.id === id);
+    if (!entry) return {};
+
+    let newChapters = state.chapters;
+    const oldVal = entry.value.trim();
+    const newVal = value.trim();
+
+    if (oldVal && newVal && oldVal !== newVal) {
+      const regex = new RegExp(`@${oldVal.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'g');
+      newChapters = state.chapters.map(ch => ({
+        ...ch,
+        content: ch.content.replace(regex, `@${newVal}`)
+      }));
+    }
+
+    return {
+      world: state.world.map(e => e.id === id ? { ...e, value } : e),
+      chapters: newChapters
+    };
+  }),
 
   loadBookData: (data) => set((state) => ({
     ...state,

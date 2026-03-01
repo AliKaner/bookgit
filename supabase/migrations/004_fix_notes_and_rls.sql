@@ -14,6 +14,7 @@ WHERE n.book_id = b.id AND n.user_id IS NULL;
 
 -- 3. Update RLS policies for notes
 DROP POLICY IF EXISTS "notes: owner" ON public.notes;
+DROP POLICY IF EXISTS "notes: own" ON public.notes;
 CREATE POLICY "notes: own" ON public.notes FOR ALL USING (user_id = auth.uid());
 
 -- 4. Ensure character_details also has a direct user_id check if possible, 

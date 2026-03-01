@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
-import { CharacterHighlight } from './CharacterHighlight';
+import { ContentHighlight, HighlightItem } from './ContentHighlight';
 import { PageBreakDecorator } from './PageBreakDecorator';
 import { useEditorStore } from '@/store/useEditorStore';
 
@@ -26,10 +26,17 @@ const sizeClass: Record<string, string> = {
 };
 
 export function StoryEditor({ chapterId, initialContent = '', onContentChange }: Props) {
-  const { characters, styles } = useEditorStore();
+  const { characters, dictionary, world, styles } = useEditorStore();
   // Bölüm değişimini takip etmek için ref
   const prevChapterIdRef = useRef<string>(chapterId);
   const isMountedRef = useRef(false);
+
+  // Prepare highlights
+  const highlightItems: HighlightItem[] = [
+    ...characters.map(c => ({ text: c.name, color: c.color })),
+    ...dictionary.map(d => ({ text: d.word, color: d.color })),
+    ...world.map(w => ({ text: w.value, color: 'emerald' })), // World entries default to emerald
+  ];
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -39,8 +46,8 @@ export function StoryEditor({ chapterId, initialContent = '', onContentChange }:
         placeholder: 'Bir zamanlar...',
         emptyEditorClass: 'is-editor-empty',
       }),
-      CharacterHighlight.configure({
-        characters: characters.map(c => ({ name: c.name, color: c.color })),
+      ContentHighlight.configure({
+        items: highlightItems,
       }),
       PageBreakDecorator,
     ],
@@ -82,6 +89,12 @@ export function StoryEditor({ chapterId, initialContent = '', onContentChange }:
     dom.style.fontFamily = fontMap[styles.bodyFont] ?? 'Georgia, serif';
     dom.style.color = styles.bodyColor || '';
   }, [styles.bodyFont, styles.bodyColor, editor]);
+
+  // Highlight öğelerini güncelle
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) return;
+    editor.commands.updateHighlightItems(highlightItems);
+  }, [highlightItems, editor]);
 
   if (!editor) return null;
 
