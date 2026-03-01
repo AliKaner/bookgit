@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { BookOpen, GitBranch, Eye, Users, Globe, ArrowRight, Sparkles, Layers, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -7,6 +8,14 @@ import { useTranslation, LanguageSwitcher } from "@/contexts/LanguageContext";
 
 export default function LandingPage() {
   const { t } = useTranslation();
+
+  useEffect(() => {
+    console.log("[ENV DEBUG]", {
+      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+    });
+  }, []);
 
   const FEATURES = [
     { icon: <GitBranch className="w-5 h-5" />, key: "branch" as const, color: "from-violet-500/20 to-violet-900/10 border-violet-800/30", iconColor: "text-violet-400" },
