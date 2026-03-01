@@ -141,25 +141,34 @@ export async function getBookState(bookId: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
 
-  // Fetch all in parallel
+  // 0. Fetch book settings and series_id first
+  const { data: book } = await supabase.from("books").select("series_id, editor_settings").eq("id", bookId).single();
+  const seriesId = book?.series_id;
+
+  // 1. Fetch all in parallel
+  // Characters, Dictionary, World are fetched by book_id OR series_id
   const [
     { data: chapters },
     { data: characters },
     { data: dictionary },
     { data: world },
-    { data: notes },
-    { data: bookSettings }
+    { data: notes }
   ] = await Promise.all([
     supabase.from("chapters").select("*").eq("book_id", bookId).is("deleted_at", null).order("order"),
-    supabase.from("characters").select("*, details:character_details(*)").eq("book_id", bookId),
-    supabase.from("dictionary_entries").select("*").eq("book_id", bookId),
-    supabase.from("world_entries").select("*").eq("book_id", bookId),
-    supabase.from("notes").select("*").eq("book_id", bookId).order("created_at"),
-    supabase.from("books").select("editor_settings").eq("id", bookId).single()
+    seriesId 
+      ? supabase.from("characters").select("*, details:character_details(*)").or(`book_id.eq.${bookId},series_id.eq.${seriesId}`)
+      : supabase.from("characters").select("*, details:character_details(*)").eq("book_id", bookId),
+    seriesId
+      ? supabase.from("dictionary_entries").select("*").or(`book_id.eq.${bookId},series_id.eq.${seriesId}`)
+      : supabase.from("dictionary_entries").select("*").eq("book_id", bookId),
+    seriesId
+      ? supabase.from("world_entries").select("*").or(`book_id.eq.${bookId},series_id.eq.${seriesId}`)
+      : supabase.from("world_entries").select("*").eq("book_id", bookId),
+    supabase.from("notes").select("*").eq("book_id", bookId).order("created_at")
   ]);
 
   return {
-    styles: bookSettings?.editor_settings || {},
+    styles: book?.editor_settings || {},
     chapters: (chapters ?? []).map(ch => ({
       id: ch.id,
       title: ch.title,
@@ -391,14 +400,17 @@ export async function saveBookState(bookId: string, state: any) {
   const { error: chError } = await supabase.from("chapters").upsert(chaptersToUpsert, { onConflict: "id" });
   if (chError) return { error: chError.message };
 
+  // 1.5 Get current series_id
+  const { data: bookMeta } = await supabase.from("books").select("series_id").eq("id", bookId).single();
+  const seriesId = bookMeta?.series_id;
+
   // 2. Upsert Characters & Details
-  // This is slightly more complex if we want to sync perfectly, 
-  // but for now let's just upsert the characters.
   for (const char of state.characters) {
     const { data: cData, error: cErr } = await supabase.from("characters").upsert({
       id: char.id,
       user_id: user.id,
       book_id: bookId,
+      series_id: seriesId,
       name: char.name,
       role: char.role,
       color: char.color,
@@ -413,6 +425,7 @@ export async function saveBookState(bookId: string, state: any) {
         value: d.value
       }));
       if (detailsToUpsert.length) {
+        // This relies on the unique constraint we added in 003 migration
         await supabase.from("character_details").upsert(detailsToUpsert, { onConflict: "character_id,key" });
       }
     }
@@ -423,6 +436,7 @@ export async function saveBookState(bookId: string, state: any) {
     id: d.id,
     user_id: user.id,
     book_id: bookId,
+    series_id: seriesId,
     word: d.word,
     meaning: d.meaning,
     color: d.color
@@ -434,6 +448,7 @@ export async function saveBookState(bookId: string, state: any) {
     id: w.id,
     user_id: user.id,
     book_id: bookId,
+    series_id: seriesId,
     label: w.label,
     value: w.value
   }));

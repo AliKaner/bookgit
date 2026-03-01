@@ -58,17 +58,19 @@ export default function EditorPage() {
 
   const activeChapter = chapters.find(ch => ch.id === activeChapterId) ?? chapters[0];
 
-  async function handleSave() {
-    setSaveState('saving');
+  async function handleSave(showIndicator = true) {
+    if (showIndicator) setSaveState('saving');
     try {
       const params = new URLSearchParams(window.location.search);
       const bookId = params.get('bookId');
       if (!bookId) return;
 
-      const result = await saveBookState(bookId, state);
+      const result = await saveBookState(bookId, useEditorStore.getState());
       if (result && 'success' in result && result.success) {
-        setSaveState('saved');
-        setTimeout(() => setSaveState('idle'), 2000);
+        if (showIndicator) {
+          setSaveState('saved');
+          setTimeout(() => setSaveState('idle'), 2000);
+        }
       } else {
         setSaveState('idle');
       }
@@ -76,6 +78,20 @@ export default function EditorPage() {
       setSaveState('idle'); 
     }
   }
+
+  // Autosave Timer
+  useEffect(() => {
+    const intervalMin = state.styles.autosaveInterval || 0;
+    if (intervalMin === 0) return;
+
+    const timer = setInterval(() => {
+      console.log(`Autosaving... (${intervalMin} min interval)`);
+      handleSave(false); // don't show the full button transition for background saves
+    }, intervalMin * 60 * 1000);
+
+    return () => clearInterval(timer);
+  }, [state.styles.autosaveInterval, state]); // dependency on state might be too frequent, maybe just bookId? 
+  // Actually, handleSave uses the current state from the closure or store.
 
   if (loading) {
     return (
@@ -122,8 +138,22 @@ export default function EditorPage() {
 
           <div className="flex-1" />
 
+          {/* Save Status Indicator */}
+          {saveState !== 'idle' && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-zinc-100 dark:bg-zinc-800/50 text-[10px] text-zinc-500 animate-in fade-in slide-in-from-right-2">
+              {saveState === 'saving' ? (
+                <>
+                  <Loader2 className="w-2.5 h-2.5 animate-spin text-violet-500" />
+                  <span>{t.editor.save || 'Saving...'}</span>
+                </>
+              ) : (
+                <span className="text-emerald-500 font-medium">{t.editor.saved || 'Saved!'}</span>
+              )}
+            </div>
+          )}
+
           {/* Save */}
-          <button onClick={handleSave} disabled={saveState === 'saving'}
+          <button onClick={() => handleSave()} disabled={saveState === 'saving'}
             className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
               saveState === 'saved' ? "bg-emerald-600 text-white" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700")}>
             {saveState === 'saving' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
@@ -211,6 +241,20 @@ function SettingsPanel({ colorHex }: { colorHex: Record<string, string> }) {
         <StyleRow label={t.editor.fontLabel}><BtnGroup options={FONTS} value={styles.bodyFont} onChange={v => setStyle('bodyFont', v)} /></StyleRow>
         <StyleRow label={t.editor.sizeLabel}><BtnGroup options={SIZES} value={styles.bodySize} onChange={v => setStyle('bodySize', v)} /></StyleRow>
         <StyleRow label={t.editor.colorLabel}><ColorPicker colors={TEXT_COLORS} value={styles.bodyColor} onChange={v => setStyle('bodyColor', v)} /></StyleRow>
+      </StyleGroup>
+      <StyleGroup title="Editor">
+        <StyleRow label="Autosave">
+          <select 
+            value={styles.autosaveInterval} 
+            onChange={e => setStyle('autosaveInterval', Number(e.target.value))}
+            className="w-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 text-xs outline-none text-zinc-700 dark:text-zinc-200"
+          >
+            <option value="0">Off</option>
+            <option value="1">1 min</option>
+            <option value="2">2 min</option>
+            <option value="5">5 min</option>
+          </select>
+        </StyleRow>
       </StyleGroup>
       {characters.length > 0 && (
         <StyleGroup title={t.editor.headingChars}>

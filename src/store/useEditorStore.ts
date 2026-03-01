@@ -27,6 +27,7 @@ export interface EditorStyles {
   bodyFont: string;
   bodyColor: string;
   bodySize: string;
+  autosaveInterval: number; // 0 = off, 1, 2, 5 (minutes)
 }
 
 export interface WorldEntry {
@@ -50,7 +51,7 @@ interface EditorState {
   showNotesPanel: boolean;
   showSettingsPanel: boolean;
   showDictionaryPanel: boolean;
-  setStyle: (key: keyof EditorStyles, value: string) => void;
+  setStyle: (key: keyof EditorStyles, value: string | number) => void;
 
   addChapter: () => void;
   addBranch: (fromChapterId: string) => void;
@@ -220,6 +221,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   styles: {
     titleFont: 'serif', titleColor: '#ffffff', titleSize: '2xl',
     bodyFont: 'serif', bodyColor: '#ffffff', bodySize: 'lg',
+    autosaveInterval: 1, // Default to 1 minute
   },
   showNotesPanel: false,
   showSettingsPanel: false,
