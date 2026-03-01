@@ -27,13 +27,15 @@ CREATE INDEX IF NOT EXISTS idx_books_parent_book_id ON books(parent_book_id);
 -- RLS
 ALTER TABLE series ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "series_owner_all"
+DROP POLICY IF EXISTS "series_owner_all" ON series;
+CREATE POLICY "series_owner_all"
   ON series FOR ALL
   USING  (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
 
 -- Series visible if user owns at least one book in it (read-only for others)
-CREATE POLICY IF NOT EXISTS "series_public_read"
+DROP POLICY IF EXISTS "series_public_read" ON series;
+CREATE POLICY "series_public_read"
   ON series FOR SELECT
   USING (
     EXISTS (
