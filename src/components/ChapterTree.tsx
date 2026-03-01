@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Plus, Pencil, Check, GitBranch, Trash2, List, GitCommitHorizontal, Star } from "lucide-react";
+import { Gitgraph, TemplateName, templateExtend } from "@gitgraph/react";
 import { useEditorStore, buildChapterTree, ChapterNode, WORDS_PER_A5_PAGE, Chapter } from "@/store/useEditorStore";
 import { cn } from "@/lib/utils";
 
@@ -156,19 +157,9 @@ export function ChapterTree({ onSelect }: ChapterTreeProps) {
           ))
         ) : (
           <GitGraphView
-            onSetCanon={(id) => setChapterCanon(id)}
             chapters={chapters}
             activeChapterId={activeChapterId}
-            editingId={editingId}
-            editTitle={editTitle}
-            inputRef={inputRef}
             onSelect={handleSelect}
-            onStartEdit={startEdit}
-            onCommitEdit={commitEdit}
-            onEditTitleChange={setEditTitle}
-            onBranch={handleBranch}
-            onDelete={requestDelete}
-            deleteConfirmId={deleteConfirmId}
           />
         )}
       </div>
@@ -257,9 +248,9 @@ function ListBranch({
                 className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all flex-shrink-0">
                 <Pencil className="w-3 h-3 text-zinc-400" />
               </button>
-              <button onClick={e => { e.stopPropagation(); onSetCanon(ch.id); }} title="Canon yap"
-                className={cn("p-0.5 rounded transition-all flex-shrink-0",
-                  ch.isCanon ? "text-amber-500 opacity-100" : "opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20")}>
+              <button onClick={e => { e.stopPropagation(); onSetCanon(ch.id); }} title="Canon yap/çıkar"
+                  className={cn("p-0.5 rounded transition-all flex-shrink-0",
+                    ch.isCanon ? "text-amber-500 opacity-100" : "opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20")}>
                 <Star className={cn("w-3 h-3", ch.isCanon && "fill-current")} />
               </button>
               <button onClick={e => onBranch(ch.id, e)} title="Dal aç"
@@ -319,259 +310,120 @@ function ListBranch({
 interface GitGraphViewProps {
   chapters: Chapter[];
   activeChapterId: string;
-  editingId: string | null;
-  editTitle: string;
-  inputRef: React.RefObject<HTMLInputElement | null>;
   onSelect: (id: string) => void;
-  onStartEdit: (id: string, title: string, e: React.MouseEvent) => void;
-  onCommitEdit: () => void;
-  onEditTitleChange: (v: string) => void;
-  onBranch: (id: string, e: React.MouseEvent) => void;
-  onDelete: (id: string, e: React.MouseEvent) => void;
-  onSetCanon: (id: string) => void;
-  deleteConfirmId: string | null;
 }
 
-interface GraphRow {
-  chapter: Chapter;
-  lane: number;
-  parentLane: number | null;
-  rowIndex: number;
-}
+export function GitGraphView({ chapters, activeChapterId, onSelect }: GitGraphViewProps) {
+  const tree = buildChapterTree(chapters);
 
-/**
- * Lane assignment:
- *  - Each root gets its own sequential lane (root0=0, root1=1, …)
- *  - First child INHERITS parent's lane → straight vertical line continues
- *  - Additional children each get a brand-new lane → new colored branch
- *
- * Display order: DFS preorder (parent first, then children in order)
- */
-function buildGraphRows(chapters: Chapter[]): GraphRow[] {
-  function kids(pid: string | null) {
-    return chapters.filter(c => c.parentId === pid).sort((a, b) => a.order - b.order);
-  }
+  if (chapters.length === 0) return null;
 
-  const laneMap = new Map<string, number>();
-  let nextLane = 0;
-
-  function assignLanes(pid: string | null, parentLane: number | null) {
-    kids(pid).forEach((ch, i) => {
-      const lane = (i === 0 && parentLane !== null) ? parentLane : nextLane++;
-      laneMap.set(ch.id, lane);
-      assignLanes(ch.id, lane);
-    });
-  }
-  // roots
-  kids(null).forEach(r => {
-    laneMap.set(r.id, nextLane++);
-    assignLanes(r.id, laneMap.get(r.id)!);
+  const customTemplate = templateExtend(TemplateName.Metro, {
+    colors: LANE_COLORS,
+    commit: {
+      dot: {
+        size: 11,
+        strokeWidth: 2,
+      },
+      message: {
+        display: true,
+        displayAuthor: false,
+        displayHash: false,
+        font: "500 11px Inter, sans-serif",
+      },
+    },
+    branch: {
+      lineWidth: 2,
+      spacing: 25,
+    },
   });
-
-  const rows: GraphRow[] = [];
-  function dfs(pid: string | null) {
-    for (const ch of kids(pid)) {
-      const lane = laneMap.get(ch.id) ?? 0;
-      const parentLane = ch.parentId != null ? (laneMap.get(ch.parentId) ?? null) : null;
-      rows.push({ chapter: ch, lane, parentLane, rowIndex: rows.length });
-      dfs(ch.id);
-    }
-  }
-  dfs(null);
-  return rows;
-}
-
-function GitGraphView({
-  chapters, activeChapterId, editingId, editTitle, inputRef,
-  onSelect, onStartEdit, onCommitEdit, onEditTitleChange, onBranch, onDelete, onSetCanon, deleteConfirmId,
-}: GitGraphViewProps) {
-  const rows = buildGraphRows(chapters);
-  const ROW_H = 36;
-  const LANE_W = 20;   // wider lanes = branches lean further right
-  const DOT_R = 4.5;
-  const MARGIN_L = 10;
-
-  if (rows.length === 0) return null;
-
-  const maxLane = Math.max(...rows.map(r => r.lane));
-  const SVG_W = MARGIN_L + (maxLane + 1) * LANE_W;
-
-  // lane center x
-  const cx = (lane: number) => MARGIN_L + lane * LANE_W;
-  // row center y
-  const cy = (idx: number) => (idx + 0.5) * ROW_H;
-
-  // Per-lane first/last row index (for continuous vertical line)
-  const laneFirst = new Map<number, number>();
-  const laneLast  = new Map<number, number>();
-  rows.forEach((r, i) => {
-    if (!laneFirst.has(r.lane)) laneFirst.set(r.lane, i);
-    laneLast.set(r.lane, i);
-  });
-
-  const textLeft = SVG_W + 4;
 
   return (
-    <div className="relative" style={{ minHeight: rows.length * ROW_H }}>
-      <svg
-        className="absolute top-0 left-0 pointer-events-none"
-        width={SVG_W}
-        height={rows.length * ROW_H}
-        style={{ overflow: 'visible' }}
-      >
-        {/* 1. Continuous vertical line per lane (first→last node in that lane) */}
-        {Array.from(laneFirst.entries()).map(([lane, first]) => {
-          const last = laneLast.get(lane)!;
-          if (first === last) return null; // single node — stub handled separately
-          const color = LANE_COLORS[lane % LANE_COLORS.length];
-          const rowHasCanon = rows.some(r => r.lane === lane && r.chapter.isCanon);
-          return (
-            <line
-              key={`vline-${lane}`}
-              x1={cx(lane)} y1={cy(first)}
-              x2={cx(lane)} y2={cy(last)}
-              stroke={rowHasCanon ? '#f59e0b' : color}
-              strokeWidth={rowHasCanon ? 2.5 : 1.5}
-              strokeLinecap="round"
-            />
-          );
-        })}
+    <div className="p-4 overflow-x-auto overflow-y-hidden custom-gitgraph">
+      <Gitgraph options={{ template: customTemplate }}>
+        {(gitgraph) => {
+          // Recursive function to draw nodes
+          const renderNodes = (nodes: ChapterNode[], branch: any) => {
+            nodes.sort((a, b) => a.chapter.order - b.chapter.order);
 
-        {/* 1b. Short downward stub from any parent node that has branch children
-             (covers the case where the parent has no same-lane continuation) */}
-        {rows.map((row, i) => {
-          // Count how many branch children (lane != parent's lane) this node has
-          const branchKids = rows.filter(
-            r => r.chapter.parentId === row.chapter.id && r.lane !== row.lane
-          );
-          if (branchKids.length === 0) return null;
-          // Only draw stub if there is NO same-lane child continuing below
-          const hasSameLaneContinuation = rows.some(
-            (r, j) => j > i && r.lane === row.lane
-          );
-          if (hasSameLaneContinuation) return null; // vline already drawn
-          // Draw stub from dot center down to where the lowest branch curve ends
-          const lastBranchKidIdx = Math.max(...branchKids.map(k => k.rowIndex));
-          const color = LANE_COLORS[row.lane % LANE_COLORS.length];
-          return (
-            <line
-              key={`stub-${row.chapter.id}`}
-              x1={cx(row.lane)} y1={cy(i)}
-              x2={cx(row.lane)} y2={cy(lastBranchKidIdx)}
-              stroke={color}
-              strokeWidth={1.5}
-              strokeLinecap="round"
-              strokeOpacity={0.35}
-            />
-          );
-        })}
+            nodes.forEach((node, index) => {
+              const ch = node.chapter;
+              const isActive = ch.id === activeChapterId;
 
-        {/* 2. Branch curves: child lane ≠ parent lane */}
-        {rows.map((row) => {
-          if (row.parentLane === null || row.parentLane === row.lane) return null;
-          const parentRowIdx = rows.findIndex(r => r.chapter.id === row.chapter.parentId);
-          if (parentRowIdx === -1) return null;
-          const color = LANE_COLORS[row.lane % LANE_COLORS.length];
-          // VS Code git graph style: exit parent rightward, arrive at child from above
-          const x1b = cx(row.parentLane);
-          const y1b = cy(parentRowIdx) + DOT_R;
-          const x2b = cx(row.lane);
-          const y2b = cy(row.rowIndex) - DOT_R;
-          return (
-            <path
-              key={`branch-${row.chapter.id}`}
-              d={`M ${x1b} ${y1b} C ${x2b} ${y1b}, ${x2b} ${y2b - 6}, ${x2b} ${y2b}`}
-              fill="none"
-              stroke={row.chapter.isCanon ? '#f59e0b' : color}
-              strokeWidth={row.chapter.isCanon ? 2.5 : 1.5}
-              strokeLinecap="round"
-            />
-          );
-        })}
+              // Commit this chapter
+              branch.commit({
+                subject: ch.title,
+                dotColor: ch.isCanon ? "#fbbf24" : undefined,
+                onClick: () => onSelect(ch.id),
+                renderMessage: (commit: any) => (
+                  <text
+                    x={20}
+                    y={5}
+                    fill={isActive ? (document.documentElement.classList.contains('dark') ? '#f4f4f5' : '#18181b') : '#71717a'}
+                    style={{ 
+                      fontSize: '11px', 
+                      fontWeight: isActive ? 600 : 500,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      filter: isActive ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))' : 'none'
+                    }}
+                    onClick={() => onSelect(ch.id)}
+                  >
+                    {commit.subject}
+                    {ch.isCanon && " ⭐"}
+                  </text>
+                ),
+                style: {
+                  dot: {
+                    strokeWidth: isActive ? 4 : 2,
+                    strokeColor: isActive ? (document.documentElement.classList.contains('dark') ? '#f4f4f5' : '#18181b') : undefined
+                  }
+                }
+              });
 
-        {/* Dots on top of everything */}
-        {rows.map((row, i) => {
-          const isActive = row.chapter.id === activeChapterId;
-          const color = LANE_COLORS[row.lane % LANE_COLORS.length];
-          const x = cx(row.lane);
-          const y = cy(i);
-          return (
-            <g key={`dot-${row.chapter.id}`}>
-              {isActive && <circle cx={x} cy={y} r={DOT_R + 3.5} fill={row.chapter.isCanon ? '#f59e0b' : color} opacity={0.15} />}
-              <circle cx={x} cy={y} r={row.chapter.isCanon ? DOT_R + 0.5 : DOT_R} fill={row.chapter.isCanon ? '#fbbf24' : color} />
-              {row.chapter.isCanon && <path d={`M ${x} ${y-1.5} l 0.4 0.9 h 1 l -0.8 0.6 l 0.3 1 l -0.9 -0.6 l -0.9 0.6 l 0.3 -1 l -0.8 -0.6 h 1 z`} fill="#fff" transform={`scale(1.2) translate(${-x*0.16}, ${-y*0.16})`} />}
-              {isActive && <circle cx={x} cy={y} r={DOT_R - 1.5} fill="#fff" opacity={0.45} />}
-            </g>
-          );
-        })}
-      </svg>
+              if (node.children.length > 0) {
+                // Find canon child to continue the branch
+                const canonIndex = node.children.findIndex(c => c.chapter.isCanon);
+                const primaryIndex = canonIndex !== -1 ? canonIndex : 0;
 
-      {/* Text labels */}
-      {rows.map((row, i) => {
-        const ch = row.chapter;
-        const isActive = ch.id === activeChapterId;
-        const isEditing = editingId === ch.id;
-        const isPendingDelete = deleteConfirmId === ch.id;
-        const color = LANE_COLORS[row.lane % LANE_COLORS.length];
-        const words = ch.content
-          ? ch.content.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).filter(Boolean).length
-          : 0;
+                const primaryChild = node.children[primaryIndex];
+                const otherChildren = node.children.filter((_, i) => i !== primaryIndex);
 
-        return (
-          <div
-            key={ch.id}
-            className={cn(
-              "group absolute flex flex-col justify-center cursor-pointer rounded-r-md transition-all pr-1",
-              isActive ? "bg-zinc-100/80 dark:bg-zinc-800/80"
-                : isPendingDelete ? "bg-red-50/60 dark:bg-red-950/20"
-                : "hover:bg-zinc-50/70 dark:hover:bg-zinc-800/50"
-            )}
-            style={{ top: i * ROW_H, left: textLeft, right: 0, height: ROW_H, paddingLeft: 4 }}
-            onClick={() => onSelect(ch.id)}
-          >
-            {isEditing ? (
-              <form onSubmit={e => { e.preventDefault(); onCommitEdit(); }} className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-                <input ref={inputRef} value={editTitle} onChange={e => onEditTitleChange(e.target.value)} onBlur={onCommitEdit}
-                  className="flex-1 text-xs bg-white dark:bg-zinc-700 rounded px-1.5 py-0.5 outline-none border border-zinc-300 dark:border-zinc-600 min-w-0" />
-                <button type="submit" onClick={e => e.stopPropagation()}><Check className="w-3 h-3 text-zinc-500" /></button>
-              </form>
-            ) : (
-              <>
-                <div className="flex items-center gap-0.5 min-w-0">
-                  <span className="flex-1 truncate text-[11px] font-medium" style={{ color }}>
-                    {ch.title}
-                  </span>
-                  <button onClick={e => { e.stopPropagation(); onSetCanon(ch.id); }} title="Canon yap"
-                    className={cn("p-0.5 rounded transition-all flex-shrink-0",
-                      ch.isCanon ? "text-amber-500 opacity-100" : "opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20")}>
-                    <Star className={cn("w-2.5 h-2.5", ch.isCanon && "fill-current")} />
-                  </button>
-                  {/* Branch: primary git action – most prominent */}
-                  <button onClick={e => onBranch(ch.id, e)} title="Dal aç"
-                    className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-violet-500/10 hover:bg-violet-500 text-violet-400 hover:text-white transition-all flex-shrink-0">
-                    <GitBranch className="w-2.5 h-2.5" />
-                  </button>
-                  {/* Edit: secondary */}
-                  <button onClick={e => onStartEdit(ch.id, ch.title, e)}
-                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-all flex-shrink-0">
-                    <Pencil className="w-2.5 h-2.5 text-zinc-400" />
-                  </button>
-                  {/* Delete: tertiary */}
-                  <button onClick={e => onDelete(ch.id, e)} title="Sil"
-                    className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 transition-all flex-shrink-0">
-                    <Trash2 className="w-2 h-2 text-red-400/70" />
-                  </button>
-                </div>
-                {words > 0 && (
-                  <span className="text-[9px] text-zinc-400 dark:text-zinc-500 leading-none">
-                    {words} k · ~{Math.ceil(words / WORDS_PER_A5_PAGE)} s
-                  </span>
-                )}
-              </>
-            )}
-          </div>
-        );
-      })}
+                // 1. Other children create branches
+                otherChildren.forEach(child => {
+                  const newBranch = gitgraph.branch({
+                    name: child.chapter.id,
+                    style: { label: { display: false } }
+                  });
+                  renderNodes([child], newBranch);
+                });
+
+                // 2. Primary child continues this branch
+                renderNodes([primaryChild], branch);
+              }
+            });
+          };
+
+          const roots = tree;
+          if (roots.length > 0) {
+            const main = gitgraph.branch({
+              name: "main",
+              style: { label: { display: false } }
+            });
+            renderNodes(roots, main);
+          }
+        }}
+      </Gitgraph>
+
+      <style jsx global>{`
+        .custom-gitgraph svg {
+          height: auto !important;
+          min-height: 400px;
+        }
+        .dark .custom-gitgraph text {
+          fill: #a1a1aa;
+        }
+      `}</style>
     </div>
   );
 }

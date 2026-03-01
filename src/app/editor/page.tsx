@@ -14,6 +14,7 @@ import { useEditorStore } from "@/store/useEditorStore";
 import { useTranslation, LanguageSwitcher } from "@/contexts/LanguageContext";
 import { getBookState, saveBookState } from "@/app/actions/books";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 type LeftPanel = 'chapters' | 'notes' | null;
@@ -26,6 +27,7 @@ const COLOR_HEX: Record<string, string> = {
 
 export default function EditorPage() {
   const { t } = useTranslation();
+  const router = useRouter();
   const state = useEditorStore();
   const { chapters, activeChapterId, updateChapterTitle, setActiveChapter, updateChapterContent, styles, loadBookData } = state;
   
@@ -39,13 +41,14 @@ export default function EditorPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const bookId = params.get('bookId');
-    if (!bookId) { setLoading(false); return; }
+    if (!bookId) { router.push('/books'); return; }
 
     async function load() {
       try {
         const data = await getBookState(bookId!);
         if (data && !('error' in data)) {
-          loadBookData(data);
+          // Add bookId to the state being loaded
+          loadBookData({ ...data, bookId });
         }
       } catch (err) {
         console.error("Failed to load book state:", err);
@@ -61,37 +64,71 @@ export default function EditorPage() {
   async function handleSave(showIndicator = true) {
     if (showIndicator) setSaveState('saving');
     try {
-      const params = new URLSearchParams(window.location.search);
-      const bookId = params.get('bookId');
-      if (!bookId) return;
+      const currentState = useEditorStore.getState();
+      const bookId = currentState.bookId;
+      if (!bookId) {
+        console.warn("Save aborted: No bookId in store");
+        setSaveState('idle');
+        return;
+      }
 
-      const result = await saveBookState(bookId, useEditorStore.getState());
+      // Clean payload: only send serializable data, no functions
+      const payload = {
+        chapters: currentState.chapters,
+        characters: currentState.characters,
+        dictionary: currentState.dictionary,
+        world: currentState.world,
+        notes: currentState.notes,
+        styles: currentState.styles
+      };
+
+      console.log(`[Save] Sending request for book ${bookId}...`);
+      const result = await saveBookState(bookId, payload);
+      
       if (result && 'success' in result && result.success) {
+        console.log(`[Save] Success for book ${bookId}`);
         if (showIndicator) {
           setSaveState('saved');
           setTimeout(() => setSaveState('idle'), 2000);
         }
       } else {
+        console.error(`[Save] Error:`, (result as any)?.error);
         setSaveState('idle');
       }
-    } catch { 
+    } catch (err) { 
+      console.error(`[Save] Unexpected Error:`, err);
       setSaveState('idle'); 
     }
   }
 
-  // Autosave Timer
+  // Reactive Save for Side Panels (Characters, World, Dictionary, Notes)
+  const { characters, dictionary, world, notes } = state;
+  const [isInitial, setIsInitial] = useState(true);
+
+  useEffect(() => {
+    if (isInitial) {
+      setIsInitial(false);
+      return;
+    }
+    const timer = setTimeout(() => {
+      console.log("[Reactive] Triggering save due to panel change...");
+      handleSave(false);
+    }, 500); // 500ms for faster response
+    return () => clearTimeout(timer);
+  }, [characters, dictionary, world, notes]);
+
+  // Autosave Timer (Legacy interval-based fallback for the editor content itself)
   useEffect(() => {
     const intervalMin = state.styles.autosaveInterval || 0;
     if (intervalMin === 0) return;
 
     const timer = setInterval(() => {
       console.log(`Autosaving... (${intervalMin} min interval)`);
-      handleSave(false); // don't show the full button transition for background saves
+      handleSave(false);
     }, intervalMin * 60 * 1000);
 
     return () => clearInterval(timer);
-  }, [state.styles.autosaveInterval, state]); // dependency on state might be too frequent, maybe just bookId? 
-  // Actually, handleSave uses the current state from the closure or store.
+  }, [state.styles.autosaveInterval]); // Removed 'state' from deps to avoid infinite loops with reactive save
 
   if (loading) {
     return (

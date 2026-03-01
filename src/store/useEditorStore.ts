@@ -48,6 +48,7 @@ interface EditorState {
   notes: Note[];
   world: WorldEntry[];
   styles: EditorStyles;
+  bookId: string | null;
   showNotesPanel: boolean;
   showSettingsPanel: boolean;
   showDictionaryPanel: boolean;
@@ -86,7 +87,7 @@ interface EditorState {
 }
 
 export const COLORS = ['blue', 'red', 'emerald', 'purple', 'amber', 'pink', 'cyan', 'orange'];
-const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
+const uid = () => crypto.randomUUID();
 
 const INITIAL_CHAPTER_ID = uid();
 
@@ -218,6 +219,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   dictionary: [],
   notes: [],
   world: [],
+  bookId: null,
   styles: {
     titleFont: 'serif', titleColor: '#ffffff', titleSize: '2xl',
     bodyFont: 'serif', bodyColor: '#ffffff', bodySize: 'lg',
@@ -262,18 +264,40 @@ export const useEditorStore = create<EditorState>((set) => ({
     const newActive = orphans.find(ch => ch.id !== id) ?? orphans[0];
     return { chapters: orphans, activeChapterId: newActive?.id ?? '' };
   }),
-  // Mark a chapter as canon; unset ALL other chapters at the same parent level
+  // Mark/unmark a chapter as canon. If unmarking, all descendants also lose canon status.
   setChapterCanon: (id) => set((state) => {
     const target = state.chapters.find(c => c.id === id);
     if (!target) return {};
-    return {
-      chapters: state.chapters.map(ch => {
-        if (ch.id === id) return { ...ch, isCanon: true };
-        // Unset siblings (same parentId)
-        if (ch.parentId === target.parentId) return { ...ch, isCanon: false };
-        return ch;
-      }),
-    };
+
+    const becomingCanon = !target.isCanon;
+
+    if (becomingCanon) {
+      // Set this one as canon; siblings lose canon status
+      return {
+        chapters: state.chapters.map(ch => {
+          if (ch.id === id) return { ...ch, isCanon: true };
+          if (ch.parentId === target.parentId) return { ...ch, isCanon: false };
+          return ch;
+        })
+      };
+    } else {
+      // Unset this one and ALL its descendants
+      const descendantIds = new Set<string>();
+      const collect = (pid: string) => {
+        state.chapters.filter(ch => ch.parentId === pid).forEach(ch => {
+          descendantIds.add(ch.id);
+          collect(ch.id);
+        });
+      };
+      collect(id);
+
+      return {
+        chapters: state.chapters.map(ch => {
+          if (ch.id === id || descendantIds.has(ch.id)) return { ...ch, isCanon: false };
+          return ch;
+        })
+      };
+    }
   }),
 
   setShowNotesPanel: (v) => set({ showNotesPanel: v }),

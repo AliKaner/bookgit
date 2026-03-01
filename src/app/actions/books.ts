@@ -380,6 +380,7 @@ export async function setBookSeries(bookId: string, seriesId: string | null, ord
 
 // ─── Save Full Book State ───────────────────────────────────────
 export async function saveBookState(bookId: string, state: any) {
+  console.log(`[ServerAction:saveBookState] BookId: ${bookId}, Chapters: ${state.chapters?.length}, Chars: ${state.characters?.length}`);
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
@@ -457,6 +458,7 @@ export async function saveBookState(bookId: string, state: any) {
   // 5. Upsert Notes
   const notesToUpsert = state.notes.map((n: any) => ({
     id: n.id,
+    user_id: user.id, // Added user_id for RLS
     book_id: bookId,
     title: n.title,
     content: n.content
