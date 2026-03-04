@@ -42,6 +42,12 @@ export default function LandingPage() {
           </div>
           <span className="font-bold tracking-tight">BookGit</span>
         </div>
+        <div className="hidden md:flex items-center gap-6 px-4 py-2 rounded-2xl bg-zinc-900/50 border border-zinc-800 backdrop-blur-md">
+          <Link href="/books" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">{t.entities.books}</Link>
+          <Link href="/characters" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">{t.entities.characters}</Link>
+          <Link href="/dictionary" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">{t.entities.dictionary}</Link>
+          <Link href="/world" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">{t.entities.worldUnits}</Link>
+        </div>
         <div className="flex items-center gap-3">
           <LanguageSwitcher />
           <Link href="/login" className="text-sm text-zinc-400 hover:text-white transition px-3 py-1.5">

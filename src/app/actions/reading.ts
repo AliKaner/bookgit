@@ -21,13 +21,38 @@ export async function getPublicBookForReading(bookId: string) {
 
   if (error || !book) return null;
 
+  // Get auth status for "isLiked"
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  // Get like count and isLiked
+  const [
+    { count: likeCount },
+    { data: userLike }
+  ] = await Promise.all([
+    supabase.from("book_likes").select("*", { count: "exact", head: true }).eq("book_id", bookId),
+    user 
+      ? supabase.from("book_likes").select("*").eq("book_id", bookId).eq("user_id", user.id).single()
+      : Promise.resolve({ data: null })
+  ]);
+
+  // Increment view count (simple)
+  await supabase.rpc("increment_book_views", { bid: bookId });
+
   // Get canonical chapters ordered by position
   const { data: chapters } = await supabase
     .from("chapters")
-    .select("id, title, content, order_index, is_canon, parent_id")
+    .select("id, title, content, order_index, is_canon, parent_chapter_id")
     .eq("book_id", bookId)
     .eq("is_canon", true)
+    .is("deleted_at", null)
     .order("order_index", { ascending: true });
 
-  return { book, chapters: chapters ?? [] };
+  return { 
+    book: {
+      ...book,
+      likeCount: likeCount || 0,
+      isLiked: !!userLike
+    }, 
+    chapters: chapters ?? [] 
+  };
 }

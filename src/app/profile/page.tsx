@@ -1,26 +1,34 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { User, BookOpen, Globe, Lock, LogOut, Pencil, Check, X } from "lucide-react";
+import { User, BookOpen, Globe, Lock, LogOut, Pencil, Check, X, Book, Users, Camera, Loader2, Search } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { getMyBooks } from "@/app/actions/books";
-import { signOut } from "@/app/actions/auth";
+import { signOut, updateProfile } from "@/app/actions/auth";
 import { BookCard } from "@/components/BookCard";
 import { LanguageSwitcher, useTranslation } from "@/contexts/LanguageContext";
 import type { BookWithMeta, Profile } from "@/types/supabase";
+import { getMyEntities, EntityType } from "@/app/actions/entities";
+import { EntityCard } from "@/components/entities/EntityCard";
+import { cn } from "@/lib/utils";
+
+type Tab = "books" | "characters" | "dictionary" | "world";
 
 export default function ProfilePage() {
   const { t } = useTranslation();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [books, setBooks] = useState<BookWithMeta[]>([]);
+  const [activeTab, setActiveTab] = useState<Tab>("books");
+  const [entities, setEntities] = useState<any[]>([]);
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [loading, setLoading] = useState(true);
+  const [entitiesLoading, setEntitiesLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
-  // createClient() inside useEffect — never runs during SSR prerendering
   useEffect(() => {
     const supabase = createClient();
     async function load() {
@@ -44,6 +52,25 @@ export default function ProfilePage() {
     load();
   }, []);
 
+  useEffect(() => {
+    if (activeTab === "books") return;
+    
+    async function loadEntities() {
+      setEntitiesLoading(true);
+      const typeMap: Record<string, EntityType> = {
+        characters: "character",
+        dictionary: "dictionary",
+        world: "world"
+      };
+      const res = await getMyEntities(typeMap[activeTab]);
+      if (res.data) {
+        setEntities(res.data);
+      }
+      setEntitiesLoading(false);
+    }
+    loadEntities();
+  }, [activeTab]);
+
   async function saveProfile() {
     if (!profile) return;
     setSaving(true);
@@ -56,11 +83,52 @@ export default function ProfilePage() {
     setSaving(false);
   }
 
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !profile) return;
+
+    setUploading(true);
+    const supabase = createClient();
+    const fileExt = file.name.split(".").pop();
+    const filePath = `pp/${profile.id}/${Math.random()}.${fileExt}`;
+
+    try {
+      // 1. Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // 2. Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(filePath);
+
+      // 3. Update profile record
+      const res = await updateProfile({ avatar_url: publicUrl });
+      if (res.error) throw new Error(res.error);
+
+      setProfile((p) => p ? { ...p, avatar_url: publicUrl } : p);
+    } catch (err: any) {
+      alert(err.message || "Fotoğraf yüklenemedi");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   const initials = (profile?.display_name ?? profile?.email ?? "?")
     .split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
 
   const publicBooks = books.filter((b) => b.visibility === "public");
   const privateBooks = books.filter((b) => b.visibility === "private");
+
+  const TABS = [
+    { id: "books", label: t.profile.books, icon: <BookOpen className="w-4 h-4" /> },
+    { id: "characters", label: t.entities.characters, icon: <Users className="w-4 h-4" /> },
+    { id: "dictionary", label: t.entities.dictionary, icon: <Book className="w-4 h-4" /> },
+    { id: "world", label: t.entities.worldUnits, icon: <Globe className="w-4 h-4" /> },
+  ] as const;
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
@@ -91,14 +159,32 @@ export default function ProfilePage() {
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 mb-8">
           <div className="flex items-start gap-6">
             {/* Avatar */}
-            <div className="relative flex-shrink-0">
-              {profile?.avatar_url ? (
-                <img src={profile.avatar_url} alt="avatar" className="w-20 h-20 rounded-2xl object-cover" />
-              ) : (
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-600 to-blue-600 flex items-center justify-center text-2xl font-bold text-white shadow-xl shadow-violet-900/30">
-                  {loading ? <User className="w-8 h-8 text-white/50" /> : initials}
-                </div>
-              )}
+            <div className="relative flex-shrink-0 group">
+              <div className="relative w-24 h-24 rounded-2xl overflow-hidden bg-zinc-800 border-2 border-zinc-800 group-hover:border-violet-500/50 transition-all shadow-2xl">
+                {profile?.avatar_url ? (
+                  <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-violet-600/80 to-blue-600/80 flex items-center justify-center text-3xl font-bold text-white">
+                    {loading ? <Loader2 className="w-8 h-8 text-white/50 animate-spin" /> : initials}
+                  </div>
+                )}
+                
+                {/* Upload Overlay */}
+                <label className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                  {uploading ? (
+                    <Loader2 className="w-6 h-6 text-white animate-spin" />
+                  ) : (
+                    <>
+                      <Camera className="w-6 h-6 text-white mb-1" />
+                      <span className="text-[10px] text-white font-medium">PP Değiştir</span>
+                    </>
+                  )}
+                  <input type="file" className="hidden" accept="image/*" onChange={handleAvatarUpload} disabled={uploading} />
+                </label>
+              </div>
+              
+              {/* Status Glow */}
+              <div className="absolute -inset-1 bg-gradient-to-r from-violet-600 to-blue-600 rounded-2xl blur opacity-20 group-hover:opacity-40 transition-opacity" />
             </div>
 
             {/* Info */}
@@ -154,41 +240,85 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Book sections */}
-        {!loading && books.length > 0 && (
-          <>
-            {publicBooks.length > 0 && (
-              <section className="mb-8">
-                <div className="flex items-center gap-2 mb-4">
-                  <Globe className="w-3.5 h-3.5 text-violet-400" />
-                  <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-widest">{t.profile.publicBooks}</h2>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {publicBooks.map((b) => <BookCard key={b.id} book={b} />)}
-                </div>
-              </section>
-            )}
-            {privateBooks.length > 0 && (
-              <section>
-                <div className="flex items-center gap-2 mb-4">
-                  <Lock className="w-3.5 h-3.5 text-zinc-500" />
-                  <h2 className="text-sm font-semibold text-zinc-400 uppercase tracking-widest">{t.profile.privateBooks}</h2>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {privateBooks.map((b) => <BookCard key={b.id} book={b} />)}
-                </div>
-              </section>
-            )}
-          </>
-        )}
+        {/* Tabs */}
+        <div className="flex items-center gap-1 mb-8 bg-zinc-900 border border-zinc-800 p-1 rounded-2xl w-fit shadow-xl shadow-black/20">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as Tab)}
+              className={cn(
+                "flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all uppercase tracking-wider",
+                activeTab === tab.id 
+                  ? "bg-zinc-800 text-white shadow-lg border border-zinc-700/50" 
+                  : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50"
+              )}
+            >
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-        {!loading && books.length === 0 && (
-          <div className="text-center py-16 text-zinc-600">
-            <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">{t.profile.noBooks}</p>
-            <Link href="/books" className="mt-3 inline-flex items-center gap-1 text-violet-400 hover:text-violet-300 text-sm transition">
-              {t.profile.createLink}
-            </Link>
+        {/* Content Section */}
+        {loading || (entitiesLoading && activeTab !== "books") ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="aspect-[3/4] rounded-2xl bg-zinc-900 border border-zinc-800 animate-pulse shadow-lg shadow-black/10" />
+            ))}
+          </div>
+        ) : activeTab === "books" ? (
+          books.length > 0 ? (
+            <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {publicBooks.length > 0 && (
+                <section>
+                  <div className="flex items-center gap-2 mb-6">
+                    <Globe className="w-4 h-4 text-violet-400" />
+                    <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-[0.2em]">{t.profile.publicBooks}</h2>
+                    <div className="h-px flex-1 bg-zinc-800/50 ml-4" />
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                    {publicBooks.map((b) => <BookCard key={b.id} book={b} />)}
+                  </div>
+                </section>
+              )}
+              {privateBooks.length > 0 && (
+                <section>
+                  <div className="flex items-center gap-2 mb-6">
+                    <Lock className="w-4 h-4 text-zinc-500" />
+                    <h2 className="text-xs font-bold text-zinc-400 uppercase tracking-[0.2em]">{t.profile.privateBooks}</h2>
+                    <div className="h-px flex-1 bg-zinc-800/50 ml-4" />
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                    {privateBooks.map((b) => <BookCard key={b.id} book={b} />)}
+                  </div>
+                </section>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-24 bg-zinc-900/30 border border-dashed border-zinc-800 rounded-3xl">
+              <BookOpen className="w-12 h-12 mx-auto mb-4 text-zinc-700" />
+              <p className="text-zinc-500 text-sm mb-6">{t.profile.noBooks}</p>
+              <Link href="/books" className="px-6 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition shadow-lg shadow-violet-900/30">
+                {t.profile.createLink}
+              </Link>
+            </div>
+          )
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {entities.length > 0 ? (
+              entities.map((item) => (
+                <EntityCard 
+                  key={item.id} 
+                  type={activeTab === "characters" ? "character" : activeTab === "dictionary" ? "dictionary" : "world"} 
+                  item={item} 
+                />
+              ))
+            ) : (
+              <div className="col-span-full text-center py-24 bg-zinc-900/30 border border-dashed border-zinc-800 rounded-3xl">
+                <Search className="w-12 h-12 mx-auto mb-4 text-zinc-700" />
+                <p className="text-zinc-500 text-sm">{t.entities.noResults}</p>
+              </div>
+            )}
           </div>
         )}
       </main>

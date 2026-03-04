@@ -1,8 +1,11 @@
 import { getPublicBookForReading } from "@/app/actions/reading";
+import { getBookComments } from "@/app/actions/social";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { BookOpen, ArrowLeft, GitBranch, Globe } from "lucide-react";
+import { BookOpen, ArrowLeft, GitBranch, Globe, Info, Calendar, User as UserIcon } from "lucide-react";
 import type { Metadata } from "next";
+import { ReadingControls } from "@/components/reading/ReadingControls";
+import { CommentsSection } from "@/components/reading/CommentsSection";
 
 interface Props { params: Promise<{ id: string }> }
 
@@ -13,131 +16,213 @@ export default async function ReadPage({ params }: Props) {
   if (!data) notFound();
 
   const { book, chapters } = data;
-  const profile = (book.profiles as unknown as { display_name?: string; avatar_url?: string } | null);
+  const commentsRes = await getBookComments(id);
+  const initialComments = commentsRes.data || [];
+
+  const profile = (book.profiles as unknown as { display_name?: string; avatar_url?: string; username?: string } | null);
   const genres = (book.book_genres as unknown as { genres: { slug: string; emoji: string; labels: Record<string, string> } }[]) ?? [];
   const tags = (book.book_tags as unknown as { tags: { name: string } }[]) ?? [];
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       {/* Ambient glow */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-violet-600/6 blur-[100px] rounded-full" />
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-violet-600/10 blur-[120px] rounded-full opacity-50" />
+        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-blue-600/5 blur-[100px] rounded-full opacity-30" />
       </div>
 
       {/* Top bar */}
-      <header className="sticky top-0 z-20 border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md">
-        <div className="max-w-3xl mx-auto px-6 h-13 flex items-center justify-between py-3">
-          <Link href="/books" className="flex items-center gap-2 text-zinc-500 hover:text-zinc-300 transition text-sm">
-            <ArrowLeft className="w-4 h-4" />
-            <span className="hidden sm:block">Back to Books</span>
+      <header className="sticky top-0 z-40 border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md">
+        <div className="max-w-4xl mx-auto px-6 h-14 flex items-center justify-between">
+          <Link href="/books" className="group flex items-center gap-2 text-zinc-500 hover:text-zinc-300 transition text-sm font-medium">
+            <div className="p-1.5 rounded-lg border border-zinc-800 group-hover:bg-zinc-800 transition-colors">
+              <ArrowLeft className="w-4 h-4" />
+            </div>
+            <span className="hidden sm:block">Explore Books</span>
           </Link>
-          <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-md bg-violet-600 flex items-center justify-center">
-              <BookOpen className="w-3 h-3 text-white" />
+          
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 rounded-lg bg-violet-600 flex items-center justify-center shadow-lg shadow-violet-900/40">
+              <BookOpen className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className="font-semibold text-sm tracking-tight text-zinc-300">BookGit</span>
-          </div>
-          <Link href="/login" className="text-xs px-3 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white font-medium transition">
-            Sign In
-          </Link>
-        </div>
-      </header>
-
-      {/* Book header */}
-      <div className="relative border-b border-zinc-800/60">
-        <div className="max-w-3xl mx-auto px-6 py-12 flex gap-8 items-start">
-          {/* Cover */}
-          <div className="flex-shrink-0 w-28 h-40 rounded-2xl overflow-hidden ring-1 ring-white/10 shadow-2xl shadow-black/60"
-            style={{ background: book.cover_image_url ? "transparent" : book.cover_color }}>
-            {book.cover_image_url && (
-              <img src={book.cover_image_url} alt={book.title} className="w-full h-full object-cover" />
-            )}
+            <span className="font-bold text-sm tracking-tight text-white">BookGit</span>
           </div>
 
-          <div className="flex-1 min-w-0 pt-2">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-violet-900/30 border border-violet-800/40 text-violet-300 font-medium">
-                <Globe className="w-2.5 h-2.5" /> Public
-              </span>
-              {genres[0] && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700">
-                  {genres[0].genres.emoji} {genres[0].genres.labels["en"] ?? genres[0].genres.labels["tr"]}
-                </span>
-              )}
-            </div>
-
-            <h1 className="text-3xl font-bold text-white mb-2 leading-tight">{book.title}</h1>
-
-            {profile?.display_name && (
-              <p className="text-sm text-zinc-400 mb-3">by <span className="text-zinc-300 font-medium">{profile.display_name}</span></p>
-            )}
-
-            {book.description && (
-              <p className="text-sm text-zinc-500 leading-relaxed mb-4 max-w-lg">{book.description}</p>
-            )}
-
-            <div className="flex flex-wrap gap-2">
-              {chapters.length > 0 && (
-                <span className="text-xs text-zinc-600 flex items-center gap-1">
-                  <GitBranch className="w-3 h-3" /> {chapters.length} chapter{chapters.length !== 1 ? "s" : ""}
-                </span>
-              )}
-              {tags.slice(0, 5).map((t) => (
-                <span key={t.tags.name} className="text-[10px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-500">#{t.tags.name}</span>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Chapter list + content */}
-      <div className="max-w-3xl mx-auto px-6 py-12">
-        {chapters.length === 0 ? (
-          <div className="text-center py-20 text-zinc-600">
-            <BookOpen className="w-10 h-10 mx-auto mb-3 opacity-20" />
-            <p>No chapters yet.</p>
-          </div>
-        ) : (
-          <div className="space-y-16">
-            {chapters.map((chapter, idx) => (
-              <article key={chapter.id} className="group">
-                {/* Chapter heading */}
-                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-zinc-800/60">
-                  <span className="text-xs font-mono text-zinc-600 w-6">{idx + 1}</span>
-                  <h2 className="text-xl font-bold text-white">{chapter.title || `Chapter ${idx + 1}`}</h2>
-                </div>
-
-                {/* Chapter content */}
-                {chapter.content ? (
-                  <div
-                    className="prose prose-invert prose-sm max-w-none
-                      prose-p:text-zinc-300 prose-p:leading-8 prose-p:text-base
-                      prose-headings:text-white prose-h1:text-2xl prose-h2:text-xl
-                      prose-strong:text-white prose-em:text-zinc-400
-                      prose-blockquote:border-l-violet-600 prose-blockquote:text-zinc-400
-                      prose-code:text-violet-300 prose-code:bg-zinc-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
-                      [&_p]:mb-5 first-letter:text-4xl first-letter:font-bold first-letter:float-left first-letter:mr-2 first-letter:leading-none first-letter:text-violet-400"
-                    dangerouslySetInnerHTML={{ __html: chapter.content }}
-                  />
-                ) : (
-                  <p className="text-zinc-600 italic text-sm">This chapter has no content yet.</p>
-                )}
-              </article>
-            ))}
-          </div>
-        )}
-
-        {/* CTA at bottom */}
-        <div className="mt-24 border-t border-zinc-800 pt-12 text-center">
-          <div className="inline-block bg-zinc-900 border border-zinc-800 rounded-2xl px-8 py-8">
-            <p className="text-zinc-400 text-sm mb-4">Want to write your own book?</p>
-            <Link href="/login"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition shadow-lg shadow-violet-900/30">
-              Start Writing Free
+          <div className="flex items-center gap-4">
+             <Link href="/login" className="text-xs px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white font-bold border border-white/10 transition-all">
+              Sign In
             </Link>
           </div>
         </div>
-      </div>
+      </header>
+
+      <main className="relative max-w-4xl mx-auto px-6 py-12">
+        {/* Book Header Section */}
+        <div className="grid md:grid-cols-[280px_1fr] gap-12 mb-20">
+          {/* Left: Cover & basic info */}
+          <div className="space-y-6">
+            <div className="aspect-[3/4] rounded-2xl overflow-hidden ring-1 ring-white/10 shadow-2xl shadow-black/80 sticky top-24"
+              style={{ background: book.cover_image_url ? "transparent" : book.cover_color }}>
+              {book.cover_image_url ? (
+                <img src={book.cover_image_url} alt={book.title} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center p-8 text-center bg-gradient-to-br from-white/10 to-transparent">
+                  <h3 className="text-xl font-bold text-white/40 drop-shadow-md">{book.title}</h3>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right: Detailed Info */}
+          <div className="pt-4">
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+              <span className="flex items-center gap-1.5 text-[10px] px-2.5 py-1 rounded-full bg-violet-950/40 border border-violet-500/30 text-violet-300 font-bold uppercase tracking-wider">
+                <Globe className="w-3 h-3" /> Public
+              </span>
+              {genres.map(g => (
+                <span key={g.genres.slug} className="text-[10px] px-2.5 py-1 rounded-full bg-zinc-900 text-zinc-400 border border-zinc-800 font-bold uppercase tracking-wider">
+                  {g.genres.emoji} {g.genres.labels["en"] || g.genres.labels["tr"]}
+                </span>
+              ))}
+            </div>
+
+            <h1 className="text-4xl md:text-5xl font-black text-white mb-6 leading-[1.1] tracking-tight">{book.title}</h1>
+
+            {/* Author Card */}
+            <div className="flex items-center gap-4 mb-8 p-3 rounded-2xl bg-white/5 border border-white/5 w-fit">
+              <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700 overflow-hidden flex items-center justify-center">
+                {profile?.avatar_url ? (
+                  <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <UserIcon className="w-5 h-5 text-zinc-500" />
+                )}
+              </div>
+              <div>
+                <span className="block text-[10px] text-zinc-500 font-bold uppercase tracking-tight">Written by</span>
+                <span className="text-sm font-bold text-white">{profile?.display_name || profile?.username || "Writer"}</span>
+              </div>
+            </div>
+
+            {/* Fork Info */}
+            {book.parent_book_id && (
+              <div className="mb-8 p-4 rounded-xl bg-blue-500/5 border border-blue-500/20 flex gap-3 items-start">
+                <GitBranch className="w-4 h-4 text-blue-400 mt-0.5" />
+                <div>
+                  <p className="text-xs text-blue-300 font-medium">Forked from another book</p>
+                  <Link href={`/read/${book.parent_book_id}`} className="text-blue-400 hover:text-blue-200 text-sm font-bold underline decoration-blue-500/30 underline-offset-4 transition">
+                    View original version
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {book.description && (
+              <div className="relative mb-10">
+                <p className="text-lg text-zinc-400 leading-relaxed max-w-2xl italic">"{book.description}"</p>
+                <div className="absolute -left-4 top-0 bottom-0 w-1 bg-violet-600/20 rounded-full" />
+              </div>
+            )}
+
+            {/* Stats & Metadata */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-10 border-t border-zinc-900 pt-8">
+              <div>
+                <span className="block text-[10px] text-zinc-500 font-bold uppercase mb-1">Chapters</span>
+                <span className="text-xl font-bold text-white">{chapters.length}</span>
+              </div>
+              <div>
+                <span className="block text-[10px] text-zinc-500 font-bold uppercase mb-1">Created</span>
+                <span className="text-sm font-medium text-zinc-300 flex items-center gap-1.5 h-7">
+                  <Calendar className="w-3.5 h-3.5" />
+                  {new Date(book.created_at).getFullYear()}
+                </span>
+              </div>
+              <div>
+                <span className="block text-[10px] text-zinc-500 font-bold uppercase mb-1">Tags</span>
+                <div className="flex flex-wrap gap-1">
+                  {tags.map(t => (
+                    <span key={t.tags.name} className="text-[10px] text-zinc-400">#{t.tags.name}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <ReadingControls book={book as any} chapters={chapters} />
+          </div>
+        </div>
+
+        {/* Chapters Section */}
+        <div className="max-w-2xl mx-auto">
+          <div className="flex items-center gap-4 mb-16">
+            <div className="h-px flex-1 bg-zinc-800" />
+            <div className="flex items-center gap-2 px-6 py-2 rounded-full border border-zinc-800 text-zinc-500 uppercase text-[10px] font-black tracking-[0.3em]">
+              Contents
+            </div>
+            <div className="h-px flex-1 bg-zinc-800" />
+          </div>
+
+          {chapters.length === 0 ? (
+            <div className="text-center py-20 text-zinc-700 bg-zinc-900/30 border border-dashed border-zinc-800 rounded-3xl">
+              <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-20" />
+              <p className="text-sm">This book has no chapters yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-24">
+              {chapters.map((chapter, idx) => (
+                <article key={chapter.id} className="animate-in fade-in slide-in-from-bottom-8 duration-700 delay-100 fill-mode-both">
+                  {/* Chapter title */}
+                  <div className="mb-10 text-center">
+                    <span className="text-[10px] text-violet-500 font-black uppercase tracking-[0.4em] mb-4 block">Chapter {idx + 1}</span>
+                    <h2 className="text-3xl font-black text-white underline decoration-violet-600/30 underline-offset-8 decoration-4">
+                      {chapter.title || `Untitled ${idx + 1}`}
+                    </h2>
+                  </div>
+
+                  {/* Content */}
+                  {chapter.content ? (
+                    <div
+                      className="prose prose-invert prose-lg max-w-none
+                        prose-p:text-zinc-300 prose-p:leading-relaxed prose-p:text-lg prose-p:mb-8
+                        prose-headings:text-white prose-strong:text-white prose-em:text-zinc-400
+                        prose-blockquote:border-l-violet-600 prose-blockquote:bg-violet-600/5 prose-blockquote:py-4 prose-blockquote:rounded-r-xl
+                        first-letter:text-6xl first-letter:font-black first-letter:float-left first-letter:mr-3 first-letter:leading-none first-letter:text-violet-500 first-letter:mt-2"
+                      dangerouslySetInnerHTML={{ __html: chapter.content }}
+                    />
+                  ) : (
+                    <p className="text-zinc-600 italic text-center text-sm py-10 bg-zinc-900/20 rounded-2xl border border-zinc-800/50">
+                      Chapter content is empty...
+                    </p>
+                  )}
+                  
+                  {/* Divider */}
+                  <div className="mt-20 flex justify-center">
+                    <div className="flex gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-zinc-800" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-violet-600/40" />
+                      <div className="w-1.5 h-1.5 rounded-full bg-zinc-800" />
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+
+          {/* Comments Section */}
+          <CommentsSection bookId={id} initialComments={initialComments} />
+
+          {/* Footer CTA */}
+          <div className="mt-32 mb-20 p-12 text-center rounded-3xl bg-gradient-to-b from-zinc-900 to-transparent border border-zinc-800 shadow-2xl relative overflow-hidden group">
+            <div className="absolute inset-0 bg-violet-600/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+            <BookOpen className="w-12 h-12 mx-auto mb-6 text-zinc-700" />
+            <h3 className="text-xl font-bold text-white mb-2">Inspired by this story?</h3>
+            <p className="text-zinc-400 text-sm mb-8 max-w-sm mx-auto">Create your own world and branch your narratives with BookGit.</p>
+            <Link href="/login"
+              className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-sm font-bold transition-all shadow-xl shadow-violet-900/40 active:scale-95">
+              Start Your Journey
+            </Link>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

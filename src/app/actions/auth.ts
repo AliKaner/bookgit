@@ -87,3 +87,18 @@ export async function getProfile() {
 
   return data;
 }
+
+export async function updateProfile(data: { display_name?: string; bio?: string; avatar_url?: string }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const { error } = await supabase
+    .from("profiles")
+    .update(data)
+    .eq("id", user.id);
+
+  if (error) return { error: error.message };
+  revalidatePath("/profile");
+  return { success: true };
+}

@@ -13,6 +13,33 @@ export interface Translations {
   characters: { title: string; searchPlaceholder: string; addName: string; addRole: string; addBtn: string; noCharacters: string; detailKey: string; detailValue: string; addDetail: string; defaultRole: string };
   notes: { title: string; addNote: string; noteTitlePlaceholder: string; noteContentPlaceholder: string; noNotes: string; defaultTitle: string };
   dictionary: { title: string; searchPlaceholder: string; addWord: string; addMeaning: string; addBtn: string; noEntries: string };
+  entities: {
+    like: string;
+    liked: string;
+    copy: string;
+    searchPlaceholder: string;
+    addToBook: string;
+    noResults: string;
+    copied: string;
+    books: string;
+    characters: string;
+    dictionary: string;
+    worldUnits: string;
+    sharedBy: string;
+    fromBook: string;
+    fork: string;
+    forked: string;
+    share: string;
+    comments: string;
+    addComment: string;
+    export: string;
+    pdf: string;
+    docx: string;
+    ink: string;
+    viewCount: string;
+    originalBook: string;
+    forkOf: string;
+  };
   world: { title: string; subtitle: string; addLabel: string; addValue: string; addBtn: string; noEntries: string; categories: { country: string; region: string; city: string; history: string; worldName: string; government: string; currency: string; language: string; religion: string; tech: string; climate: string; place: string; event: string } };
   profile: { title: string; displayNamePlaceholder: string; bioPlaceholder: string; books: string; shared: string; publicBooks: string; privateBooks: string; noBooks: string; createLink: string; saveProfile: string; editProfile: string; myBooks: string };
   userCard: { writer: string; myBooks: string; profile: string; signOut: string };
@@ -22,7 +49,6 @@ export interface Translations {
 
 // English — default language
 const en: Translations = {
-  // ── Common ──────────────────────────────────────────────
   common: {
     save: "Save",
     saved: "Saved!",
@@ -48,8 +74,6 @@ const en: Translations = {
     public: "Public",
     language: "Language",
   },
-
-  // ── Nav / Header ─────────────────────────────────────────
   nav: {
     myBooks: "My Books",
     discover: "Discover",
@@ -58,8 +82,6 @@ const en: Translations = {
     signIn: "Sign In",
     getStarted: "Get Started",
   },
-
-  // ── Landing Page ─────────────────────────────────────────
   landing: {
     badge: "Built for writers by writers",
     headline1: "Branch your story.",
@@ -78,8 +100,6 @@ const en: Translations = {
       notes: { title: "Dictionary & Notes", desc: "Define terms in a glossary, take chapter notes. Everything in one place." },
     },
   },
-
-  // ── Auth ─────────────────────────────────────────────────
   auth: {
     signIn: "Sign In",
     signUp: "Sign Up",
@@ -94,8 +114,6 @@ const en: Translations = {
     tagline: "Start writing your story.",
     minPassword: "Minimum 6 characters",
   },
-
-  // ── Books Page ───────────────────────────────────────────
   books: {
     newBook: "New Book",
     searchPlaceholder: "Search books…",
@@ -107,8 +125,6 @@ const en: Translations = {
     noPublic: "No shared books yet.",
     createFirst: "Create your first book",
   },
-
-  // ── Book Creation Dialog ──────────────────────────────────
   createBook: {
     title: "New Book",
     bookTitle: "Book Title *",
@@ -136,8 +152,6 @@ const en: Translations = {
     sequelOf: "Sequel Of",
     noParent: "None (Fresh start)",
   },
-
-  // ── Book Card ────────────────────────────────────────────
   bookCard: {
     chapters: "chapters",
     branch: "branch",
@@ -145,8 +159,6 @@ const en: Translations = {
     public: "Public",
     private: "Private",
   },
-
-  // ── Editor ───────────────────────────────────────────────
   editor: {
     chapters: "Chapters",
     notes: "Notes",
@@ -177,8 +189,6 @@ const en: Translations = {
     autosaveOff: "Off",
     minute: "min",
   },
-
-  // ── Chapter Tree ─────────────────────────────────────────
   chapterTree: {
     chapters: "Chapters",
     addChapter: "New Chapter",
@@ -198,8 +208,6 @@ const en: Translations = {
     editDone: "Done",
     makeCanon: "Make/Remove Canon",
   },
-
-  // ── Characters Panel ─────────────────────────────────────
   characters: {
     title: "Characters",
     searchPlaceholder: "Search…",
@@ -212,8 +220,6 @@ const en: Translations = {
     addDetail: "Add Detail",
     defaultRole: "Character",
   },
-
-  // ── Notes Panel ──────────────────────────────────────────
   notes: {
     title: "Notes",
     addNote: "Add Note",
@@ -222,8 +228,6 @@ const en: Translations = {
     noNotes: "No notes yet.",
     defaultTitle: "New Note",
   },
-
-  // ── Dictionary Panel ─────────────────────────────────────
   dictionary: {
     title: "Dictionary",
     searchPlaceholder: "Search terms…",
@@ -232,8 +236,33 @@ const en: Translations = {
     addBtn: "Add",
     noEntries: "No entries yet.",
   },
-
-  // ── World Panel ──────────────────────────────────────────
+  entities: {
+    like: "Like",
+    liked: "Liked",
+    copy: "Copy",
+    searchPlaceholder: "Search...",
+    addToBook: "Add to My Book",
+    noResults: "No results found.",
+    copied: "Copied to your library!",
+    books: "Books",
+    characters: "Characters",
+    dictionary: "Dictionary",
+    worldUnits: "World Units",
+    sharedBy: "Shared by",
+    fromBook: "from",
+    fork: "Fork",
+    forked: "Forked",
+    share: "Share",
+    comments: "Comments",
+    addComment: "Add a comment...",
+    export: "Export",
+    pdf: "Download as PDF",
+    docx: "Download as Word (.docx)",
+    ink: "Download as Ink (.ink)",
+    viewCount: "Views",
+    originalBook: "Original Book",
+    forkOf: "Forked from: ",
+  },
   world: {
     title: "World",
     subtitle: "Add information about the universe where your book takes place",
@@ -257,8 +286,6 @@ const en: Translations = {
       event: "Historical Event",
     },
   },
-
-  // ── Profile Page ─────────────────────────────────────────
   profile: {
     title: "Profile",
     displayNamePlaceholder: "Full Name",
@@ -273,16 +300,12 @@ const en: Translations = {
     editProfile: "Edit",
     myBooks: "My Books",
   },
-
-  // ── User Card ────────────────────────────────────────────
   userCard: {
     writer: "Writer",
     myBooks: "My Books",
     profile: "Profile",
     signOut: "Sign Out",
   },
-
-  // ── Book Preview ─────────────────────────────────────────
   preview: {
     title: "Book Preview",
     page: "Page",
@@ -290,9 +313,6 @@ const en: Translations = {
     noContent: "No content to preview.",
     close: "Close",
   },
-
-  // ── Genres ───────────────────────────────────────────────
-  // (labels come from DB in JSONB, so these are just fallbacks)
   genres: {
     fantasy: "Fantasy",
     sci_fi: "Science Fiction",

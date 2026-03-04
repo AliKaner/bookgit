@@ -148,6 +148,7 @@ export interface BookStats {
   chapter_count: number;
   branch_count: number;
   like_count: number;
+  view_count: number;
   updated_at: string;
 }
 
@@ -223,4 +224,6 @@ export interface BookWithMeta extends Book {
   stats?: BookStats;
   series?: Series;
   profile?: Pick<Profile, "display_name" | "username" | "avatar_url">;
+  likeCount?: number;
+  isLiked?: boolean;
 }

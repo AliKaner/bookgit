@@ -135,6 +135,154 @@ export async function createBook(input: CreateBookInput) {
   return { bookId: book.id };
 }
 
+// ─── Fork Book ───────────────────────────────────────────────
+export async function forkBook(bookId: string) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  // 1. Fetch source book details
+  const { data: sourceBook } = await supabase
+    .from("books")
+    .select("*, genres:book_genres(genre_id), tags:book_tags(tag_id)")
+    .eq("id", bookId)
+    .single();
+
+  if (!sourceBook) return { error: "Kaynak kitap bulunamadı" };
+
+  // 2. Create new book (The fork)
+  const { data: newBook, error: bookError } = await supabase
+    .from("books")
+    .insert({
+      user_id: user.id,
+      title: `${sourceBook.title} (Fork)`,
+      description: sourceBook.description,
+      cover_color: sourceBook.cover_color,
+      cover_image_url: sourceBook.cover_image_url,
+      visibility: "private", // Forks are private by default
+      language: sourceBook.language,
+      parent_book_id: bookId, // Link to original
+    })
+    .select()
+    .single();
+
+  if (bookError || !newBook) return { error: bookError?.message ?? "Fork oluşturulamadı" };
+
+  // 3. Copy Genres & Tags
+  if (sourceBook.genres?.length) {
+    await supabase.from("book_genres").insert(
+      sourceBook.genres.map((g: any) => ({ book_id: newBook.id, genre_id: g.genre_id }))
+    );
+  }
+  if (sourceBook.tags?.length) {
+    await supabase.from("book_tags").insert(
+      sourceBook.tags.map((t: any) => ({ book_id: newBook.id, tag_id: t.tag_id }))
+    );
+  }
+
+  // 4. Initialize stats
+  await supabase.from("book_stats").insert({ book_id: newBook.id });
+
+  // 5. Deep Copy Chapters
+  const { data: sourceChapters } = await supabase
+    .from("chapters")
+    .select("*")
+    .eq("book_id", bookId)
+    .is("deleted_at", null)
+    .order("order_index");
+
+  if (sourceChapters?.length) {
+    // We need to maintain the parent_chapter_id relationship if it exists
+    // For simplicity in this first pass, we'll copy them and re-link if they refer to the same set
+    const idMap: Record<string, string> = {};
+    
+    // First pass: insert all chapters without parent re-linking
+    for (const ch of sourceChapters) {
+      const { data: newCh } = await supabase.from("chapters").insert({
+        book_id: newBook.id,
+        title: ch.title,
+        content: ch.content,
+        order_index: ch.order_index,
+        is_canon: ch.is_canon
+      }).select("id").single();
+      
+      if (newCh) idMap[ch.id] = newCh.id;
+    }
+
+    // Second pass: update parent_chapter_id if it pointed to a chapter in this book
+    for (const ch of sourceChapters) {
+      if (ch.parent_chapter_id && idMap[ch.parent_chapter_id]) {
+        await supabase.from("chapters")
+          .update({ parent_chapter_id: idMap[ch.parent_chapter_id] })
+          .eq("id", idMap[ch.id]);
+      }
+    }
+  }
+
+  // 6. Copy Entities (Characters, Dictionary, World)
+  // This is similar to sequels but for all entities
+  const [
+    { data: chars },
+    { data: dict },
+    { data: world }
+  ] = await Promise.all([
+    supabase.from("characters").select("*, details:character_details(*)").eq("book_id", bookId),
+    supabase.from("dictionary_entries").select("*").eq("book_id", bookId),
+    supabase.from("world_entries").select("*").eq("book_id", bookId)
+  ]);
+
+  if (chars?.length) {
+    for (const char of chars) {
+      const { data: newChar } = await supabase.from("characters").insert({
+        user_id: user.id,
+        book_id: newBook.id,
+        source_character_id: char.id,
+        name: char.name,
+        role: char.role,
+        color: char.color
+      }).select().single();
+
+      if (newChar && char.details?.length) {
+        await supabase.from("character_details").insert(
+          char.details.map((d: any) => ({
+            character_id: newChar.id,
+            key: d.key,
+            value: d.value
+          }))
+        );
+      }
+    }
+  }
+
+  if (dict?.length) {
+    await supabase.from("dictionary_entries").insert(
+      dict.map(d => ({
+        user_id: user.id,
+        book_id: newBook.id,
+        source_entry_id: d.id,
+        word: d.word,
+        meaning: d.meaning,
+        color: d.color
+      }))
+    );
+  }
+
+  if (world?.length) {
+    await supabase.from("world_entries").insert(
+      world.map(w => ({
+        user_id: user.id,
+        book_id: newBook.id,
+        source_entry_id: w.id,
+        label: w.label,
+        value: w.value
+      }))
+    );
+  }
+
+  revalidatePath("/books");
+  return { bookId: newBook.id };
+}
+
 // ─── Get Full Book State for Editor ───────────────────────────
 export async function getBookState(bookId: string) {
   const supabase = await createClient();
