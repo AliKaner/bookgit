@@ -139,25 +139,73 @@ export default function EditorPage() {
   // ── Export Functions ─────────────────────────────────────────
   const bookTitle = chapters[0]?.title || 'Book';
 
-  function exportPDF() {
+  async function exportPDF() {
     const doc = new jsPDF();
+    
+    // Add Turkish supporting font
+    try {
+      const fontUrl = '/fonts/NotoSans-Regular.ttf';
+      const fontRes = await fetch(fontUrl);
+      const fontBuffer = await fontRes.arrayBuffer();
+      // Base64 encode the font
+      const base64Font = btoa(
+        new Uint8Array(fontBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+      );
+      doc.addFileToVFS('NotoSans-Regular.ttf', base64Font);
+      doc.addFont('NotoSans-Regular.ttf', 'NotoSans', 'normal');
+      doc.setFont('NotoSans');
+    } catch (err) {
+      console.warn('Could not load NotoSans font, falling back to default', err);
+    }
+
     let y = 20;
-    doc.setFontSize(22);
-    doc.text(bookTitle, 20, y); y += 15;
-    doc.setFontSize(12);
-    doc.text('', 20, y); y += 20;
+    
+    // Title Page
+    doc.setFontSize(24);
+    const titleWidth = doc.getTextWidth(bookTitle);
+    doc.text(bookTitle, (210 - titleWidth) / 2, y); // Center title (A4 width is 210mm)
+    y += 15;
+    
+    doc.setFontSize(14);
+    const authorText = `by Author`;
+    const authorWidth = doc.getTextWidth(authorText);
+    doc.text(authorText, (210 - authorWidth) / 2, y);
+    
+    // Chapters
     chapters.forEach((ch, i) => {
-      if (y > 270) { doc.addPage(); y = 20; }
-      doc.setFontSize(16);
-      doc.text(ch.title || `Chapter ${i + 1}`, 20, y); y += 10;
-      doc.setFontSize(10);
-      const lines = doc.splitTextToSize(ch.content?.replace(/<[^>]*>/g, '') || '', 170);
-      lines.forEach((line: string) => {
-        if (y > 270) { doc.addPage(); y = 20; }
-        doc.text(line, 20, y); y += 5;
+      doc.addPage();
+      y = 30; // Start lower on the page for chapter titles
+      
+      // Chapter Title (Centered)
+      doc.setFontSize(18);
+      const chTitle = ch.title || `Bölüm ${i + 1}`;
+      const chTitleWidth = doc.getTextWidth(chTitle);
+      doc.text(chTitle, (210 - chTitleWidth) / 2, y);
+      y += 15; // Space below title
+      
+      // Chapter Content
+      doc.setFontSize(11);
+      
+      const plainText = ch.content?.replace(/<p[^>]*>/g, '').replace(/<\/p>/g, '\n\n').replace(/<[^>]*>/g, '') || '';
+      const paragraphs = plainText.split(/\n\s*\n/);
+      
+      paragraphs.forEach((para) => {
+        const textToPrint = para.trim().replace(/\s+/g, ' '); // normalize spaces
+        if (!textToPrint) return;
+
+        const lines = doc.splitTextToSize(textToPrint, 170);
+        lines.forEach((line: string) => {
+          if (y > 275) { 
+            doc.addPage(); 
+            y = 20; 
+          }
+          doc.text(line, 20, y); 
+          y += 6; // Reduced line spacing
+        });
+        y += 4; // Space between paragraphs
       });
-      y += 15;
     });
+    
     doc.save(`${bookTitle}.pdf`);
   }
 

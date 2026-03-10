@@ -72,11 +72,47 @@ export async function inviteCollaborator(
     }
   }
 
-  // Can't invite yourself
-  if (targetUserId === user.id) {
-    return { error: "You cannot invite yourself" };
+  // Can't invite yourself or the owner
+  if (targetUserId === book.user_id) {
+    return { error: "You cannot invite the book owner" };
   }
 
+  // Check if they are already invited/accepted
+  const { data: existingCollab } = await supabase
+    .from("book_collaborators")
+    .select("status")
+    .eq("book_id", bookId)
+    .or(targetUserId ? `user_id.eq.${targetUserId}` : `email.eq.${targetEmail}`)
+    .in("status", ["pending", "accepted"])
+    .single();
+
+  if (existingCollab) {
+    return { error: `User is already ${existingCollab.status}` };
+  }
+
+  // If there's a rejected invite, we can just delete it and re-invite, or just create a new one (since we don't have unique constraint on status, but we do have unique on user/book). 
+  // Wait, we have UNIQUE(book_id, user_id). If they rejected, we should UPDATE the existing one to pending.
+  const { data: rejectedCollab } = await supabase
+    .from("book_collaborators")
+    .select("id")
+    .eq("book_id", bookId)
+    .or(targetUserId ? `user_id.eq.${targetUserId}` : `email.eq.${targetEmail}`)
+    .eq("status", "rejected")
+    .single();
+
+  if (rejectedCollab) {
+    const { data: collab, error } = await supabase
+      .from("book_collaborators")
+      .update({ status: "pending", invited_by: user.id })
+      .eq("id", rejectedCollab.id)
+      .select()
+      .single();
+    if (error) return { error: error.message };
+    revalidatePath("/books");
+    return { success: true, collaborator: collab };
+  }
+
+  // Not rejected, so we just insert new
   const { data: collab, error } = await supabase
     .from("book_collaborators")
     .insert({
