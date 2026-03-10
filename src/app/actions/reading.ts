@@ -10,7 +10,7 @@ export async function getPublicBookForReading(bookId: string) {
   const { data: book, error } = await supabase
     .from("books")
     .select(`
-      id, title, description, cover_color, cover_image_url, language, created_at,
+      id, title, description, cover_color, cover_image_url, language, created_at, parent_book_id,
       profiles:user_id ( display_name, avatar_url ),
       book_genres ( genres ( slug, emoji, labels ) ),
       book_tags ( tags ( name ) )
