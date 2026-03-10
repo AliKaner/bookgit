@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { sendInviteEmail } from "@/lib/email";
 
 // ─── Search Users ────────────────────────────────────────────────
 export async function searchUsers(query: string) {
@@ -36,7 +37,7 @@ export async function inviteCollaborator(
   // Verify caller is book owner
   const { data: book } = await supabase
     .from("books")
-    .select("id, user_id")
+    .select("id, user_id, title")
     .eq("id", bookId)
     .eq("user_id", user.id)
     .single();
@@ -108,6 +109,20 @@ export async function inviteCollaborator(
       .select()
       .single();
     if (error) return { error: error.message };
+
+    // Send email invite
+    if (targetEmail) {
+      const { data: inviter } = await supabase.from("profiles").select("display_name").eq("id", user.id).single();
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+      await sendInviteEmail({
+        to: targetEmail,
+        inviterName: inviter?.display_name || 'Someone',
+        bookTitle: book.title || 'A book',
+        inviteId: collab.id,
+        siteUrl
+      }).catch(console.error);
+    }
+
     revalidatePath("/books");
     return { success: true, collaborator: collab };
   }
@@ -131,6 +146,19 @@ export async function inviteCollaborator(
       return { error: "This user has already been invited" };
     }
     return { error: error.message };
+  }
+
+  // Send email invite
+  if (targetEmail) {
+    const { data: inviter } = await supabase.from("profiles").select("display_name").eq("id", user.id).single();
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    await sendInviteEmail({
+      to: targetEmail,
+      inviterName: inviter?.display_name || 'Someone',
+      bookTitle: book.title || 'A book',
+      inviteId: collab.id,
+      siteUrl
+    }).catch(console.error);
   }
 
   revalidatePath("/books");

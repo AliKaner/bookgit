@@ -7,7 +7,7 @@ import { BookCard } from "@/components/BookCard";
 import { CreateBookDialog } from "@/components/CreateBookDialog";
 import { InviteBanner } from "@/components/InviteBanner";
 import { getMyBooks, getPublicBooks, getGenres } from "@/app/actions/books";
-import { getMyInvites, getCollaboratedBooks } from "@/app/actions/collaborators";
+import { getMyInvites, getCollaboratedBooks, respondToInvite } from "@/app/actions/collaborators";
 import { signOut, getProfile } from "@/app/actions/auth";
 import type { BookWithMeta, Genre, Profile } from "@/types/supabase";
 import { cn } from "@/lib/utils";
@@ -46,6 +46,23 @@ export default function BooksPage() {
       setCollabBooks(collab || []);
     });
   }, []);
+
+  // Process pending invite cookie from email link
+  useEffect(() => {
+    if (!profile) return;
+    const processCookie = async () => {
+      const match = document.cookie.match(/(?:^|; )pending_invite_id=([^;]*)/);
+      if (match && match[1]) {
+        const inviteId = match[1];
+        document.cookie = "pending_invite_id=; path=/; max-age=0"; // Clear cookie
+        const res = await respondToInvite(inviteId, true);
+        if (res.success) {
+          refreshInvites();
+        }
+      }
+    };
+    processCookie();
+  }, [profile]);
 
   const refreshInvites = () => {
     startTransition(async () => {
