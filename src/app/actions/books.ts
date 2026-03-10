@@ -552,6 +552,25 @@ export async function saveBookState(bookId: string, state: any) {
   const { error: chError } = await supabase.from("chapters").upsert(chaptersToUpsert, { onConflict: "id" });
   if (chError) return { error: chError.message };
 
+  // 1.1 Soft-delete chapters that were removed locally
+  const currentIds = state.chapters.map((ch: any) => ch.id);
+  const { data: existingChapters } = await supabase
+    .from("chapters")
+    .select("id")
+    .eq("book_id", bookId)
+    .is("deleted_at", null);
+
+  const idsToDelete = (existingChapters ?? [])
+    .map((c: any) => c.id)
+    .filter((id: string) => !currentIds.includes(id));
+
+  if (idsToDelete.length > 0) {
+    await supabase
+      .from("chapters")
+      .update({ deleted_at: new Date().toISOString() })
+      .in("id", idsToDelete);
+  }
+
   // 1.5 Get current series_id
   const { data: bookMeta } = await supabase.from("books").select("series_id").eq("id", bookId).single();
   const seriesId = bookMeta?.series_id;

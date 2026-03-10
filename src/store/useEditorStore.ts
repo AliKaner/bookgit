@@ -235,10 +235,32 @@ export const useEditorStore = create<EditorState>((set) => ({
 
   addChapter: () => set((state) => {
     const id = uid();
-    const rootChapters = state.chapters.filter(c => c.parentId === null);
-    const order = rootChapters.length;
+    // Find the last canon chapter in the linear chain
+    let lastCanon: Chapter | null = null;
+    const roots = state.chapters.filter(c => c.parentId === null).sort((a, b) => a.order - b.order);
+    const lastRoot = roots[roots.length - 1];
+    if (lastRoot) {
+      lastCanon = lastRoot;
+      // Walk down through canon children to find the deepest one
+      let current: Chapter | undefined = lastCanon;
+      while (current) {
+        const canonChild = state.chapters
+          .filter(c => c.parentId === current!.id && c.isCanon)
+          .sort((a, b) => a.order - b.order)
+          .pop();
+        if (canonChild) {
+          lastCanon = canonChild;
+          current = canonChild;
+        } else {
+          break;
+        }
+      }
+    }
+    const parentId = lastCanon?.id ?? null;
+    const siblings = state.chapters.filter(c => c.parentId === parentId);
+    const order = siblings.length;
     return {
-      chapters: [...state.chapters, { id, title: `Chapter ${state.chapters.length + 1}`, content: '', parentId: null, order, isCanon: false }],
+      chapters: [...state.chapters, { id, title: `Chapter ${state.chapters.length + 1}`, content: '', parentId, order, isCanon: true }],
       activeChapterId: id,
     };
   }),
