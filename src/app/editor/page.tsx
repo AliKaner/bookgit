@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BookOpen, StickyNote, Users, Book, Settings, FileText, Globe, Eye, Save, Loader2 } from "lucide-react";
+import { BookOpen, StickyNote, Users, Users2, Book, Settings, FileText, Globe, Eye, Save, Loader2 } from "lucide-react";
 import { StoryEditor } from "@/components/editor/StoryEditor";
 import { CharacterPanel } from "@/components/CharacterPanel";
 import { NotesPanel } from "@/components/NotesPanel";
@@ -10,6 +10,7 @@ import { WorldPanel } from "@/components/WorldPanel";
 import { ChapterTree } from "@/components/ChapterTree";
 import { BookPreview } from "@/components/BookPreview";
 import { UserCard } from "@/components/UserCard";
+import { CollaboratorsPanel } from "@/components/CollaboratorsPanel";
 import { useEditorStore } from "@/store/useEditorStore";
 import { useTranslation, LanguageSwitcher } from "@/contexts/LanguageContext";
 import { getBookState, saveBookState } from "@/app/actions/books";
@@ -18,7 +19,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 type LeftPanel = 'chapters' | 'notes' | null;
-type RightPanel = 'characters' | 'dictionary' | 'world' | 'settings' | null;
+type RightPanel = 'characters' | 'dictionary' | 'world' | 'settings' | 'collaborators' | null;
 
 const COLOR_HEX: Record<string, string> = {
   blue: '#60a5fa', red: '#f87171', emerald: '#34d399', purple: '#a78bfa',
@@ -36,6 +37,8 @@ export default function EditorPage() {
   const [showPreview, setShowPreview] = useState(false);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [loading, setLoading] = useState(true);
+  const [bookOwnerId, setBookOwnerId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   // Load data on mount
   useEffect(() => {
@@ -50,6 +53,13 @@ export default function EditorPage() {
           // Add bookId to the state being loaded
           loadBookData({ ...data, bookId });
         }
+        // Fetch book owner for collaborator panel
+        const { createClient } = await import("@/lib/supabase/client");
+        const supabase = createClient();
+        const { data: bookData } = await supabase.from("books").select("user_id").eq("id", bookId!).single();
+        if (bookData) setBookOwnerId(bookData.user_id);
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) setCurrentUserId(user.id);
       } catch (err) {
         console.error("Failed to load book state:", err);
       } finally {
@@ -222,6 +232,9 @@ export default function EditorPage() {
             <ToggleBtn active={rightPanel === 'settings'} onClick={() => setRightPanel(p => p === 'settings' ? null : 'settings')}
               icon={<Settings className="w-3.5 h-3.5" />} label={t.editor.settings}
               activeClass="bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200" />
+            <ToggleBtn active={rightPanel === 'collaborators'} onClick={() => setRightPanel(p => p === 'collaborators' ? null : 'collaborators')}
+              icon={<Users2 className="w-3.5 h-3.5" />} label={t.collaborators.title}
+              activeClass="bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300" />
           </div>
 
           <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-700" />
@@ -252,6 +265,9 @@ export default function EditorPage() {
         {rightPanel === 'dictionary' && <DictionaryPanel />}
         {rightPanel === 'world' && <WorldPanel />}
         {rightPanel === 'settings' && <SettingsPanel colorHex={COLOR_HEX} />}
+        {rightPanel === 'collaborators' && state.bookId && (
+          <CollaboratorsPanel bookId={state.bookId} isOwner={bookOwnerId === currentUserId} />
+        )}
       </div>
     </div>
   );

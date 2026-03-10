@@ -290,7 +290,22 @@ export async function getBookState(bookId: string) {
   if (!user) return { error: "Unauthorized" };
 
   // 0. Fetch book settings and series_id first
-  const { data: book } = await supabase.from("books").select("series_id, editor_settings").eq("id", bookId).single();
+  const { data: book } = await supabase.from("books").select("user_id, series_id, editor_settings").eq("id", bookId).single();
+  if (!book) return { error: "Book not found" };
+
+  // Check access: owner or accepted collaborator
+  const isOwner = book.user_id === user.id;
+  if (!isOwner) {
+    const { data: collab } = await supabase
+      .from("book_collaborators")
+      .select("id")
+      .eq("book_id", bookId)
+      .eq("user_id", user.id)
+      .eq("status", "accepted")
+      .single();
+    if (!collab) return { error: "Unauthorized" };
+  }
+
   const seriesId = book?.series_id;
 
   // 1. Fetch all in parallel
@@ -535,6 +550,21 @@ export async function saveBookState(bookId: string, state: any) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
+
+  // Check access: owner or accepted collaborator
+  const { data: bookRow } = await supabase.from("books").select("user_id").eq("id", bookId).single();
+  if (!bookRow) return { error: "Book not found" };
+  const isOwner = bookRow.user_id === user.id;
+  if (!isOwner) {
+    const { data: collab } = await supabase
+      .from("book_collaborators")
+      .select("id")
+      .eq("book_id", bookId)
+      .eq("user_id", user.id)
+      .eq("status", "accepted")
+      .single();
+    if (!collab) return { error: "Unauthorized" };
+  }
 
   // 1. Upsert Chapters
   // Note: we use upsert to create new ones or update existing ones

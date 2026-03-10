@@ -5,7 +5,9 @@ import { Search, Plus, LogOut, BookOpen, Globe, Lock, X, Library } from "lucide-
 import { useRouter } from "next/navigation";
 import { BookCard } from "@/components/BookCard";
 import { CreateBookDialog } from "@/components/CreateBookDialog";
+import { InviteBanner } from "@/components/InviteBanner";
 import { getMyBooks, getPublicBooks, getGenres } from "@/app/actions/books";
+import { getMyInvites, getCollaboratedBooks } from "@/app/actions/collaborators";
 import { signOut, getProfile } from "@/app/actions/auth";
 import type { BookWithMeta, Genre, Profile } from "@/types/supabase";
 import { cn } from "@/lib/utils";
@@ -26,20 +28,35 @@ export default function BooksPage() {
 
   const [myBooks, setMyBooks] = useState<BookWithMeta[]>([]);
   const [publicBooks, setPublicBooks] = useState<BookWithMeta[]>([]);
+  const [collabBooks, setCollabBooks] = useState<any[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<any[]>([]);
   const [genres, setGenres] = useState<Genre[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
 
   useEffect(() => {
     startTransition(async () => {
-      const [mine, pub, gs, prof] = await Promise.all([
-        getMyBooks(), getPublicBooks(), getGenres(), getProfile(),
+      const [mine, pub, gs, prof, invites, collab] = await Promise.all([
+        getMyBooks(), getPublicBooks(), getGenres(), getProfile(), getMyInvites(), getCollaboratedBooks(),
       ]);
       setMyBooks(mine);
       setPublicBooks(pub);
       setGenres(gs as Genre[]);
       setProfile(prof as Profile | null);
+      setPendingInvites(invites.data || []);
+      setCollabBooks(collab || []);
     });
   }, []);
+
+  const refreshInvites = () => {
+    startTransition(async () => {
+      const [invites, collab, mine] = await Promise.all([
+        getMyInvites(), getCollaboratedBooks(), getMyBooks(),
+      ]);
+      setPendingInvites(invites.data || []);
+      setCollabBooks(collab || []);
+      setMyBooks(mine);
+    });
+  };
 
   const fetchPublic = useCallback(() => {
     startTransition(async () => {
@@ -120,6 +137,11 @@ export default function BooksPage() {
       </header>
 
       <main className="relative max-w-6xl mx-auto px-6 py-8">
+        {/* Pending Invites */}
+        {feed === "mine" && pendingInvites.length > 0 && (
+          <InviteBanner invites={pendingInvites} onUpdate={refreshInvites} />
+        )}
+
         <div className="flex items-center gap-3 mb-6">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />
@@ -206,6 +228,24 @@ export default function BooksPage() {
                 </div>
               </section>
             ))}
+
+            {/* Collaborated Books Section */}
+            {collabBooks.length > 0 && (
+              <section>
+                <div className="flex items-center gap-3 mb-4">
+                  <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                    <div className="w-2 h-6 bg-pink-500 rounded-full" />
+                    {t.collaborators.collaborated}
+                  </h2>
+                  <div className="h-px flex-1 bg-zinc-800" />
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {collabBooks.map((book: any) => (
+                    <BookCard key={book.id} book={book} showAuthor onAction={handleBookAction} />
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">

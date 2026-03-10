@@ -285,6 +285,28 @@ const tr: Translations = {
     self_help: "Kişisel Gelişim",
     graphic_novel: "Grafik Roman",
   },
+  collaborators: {
+    title: "İş Birlikçiler",
+    invite: "Davet Et",
+    searchPlaceholder: "İsim veya e-posta ile ara...",
+    inviteByEmail: "E-posta ile davet et",
+    emailPlaceholder: "eposta@ornek.com",
+    send: "Davet Gönder",
+    pending: "Beklemede",
+    accepted: "Aktif",
+    rejected: "Reddedildi",
+    remove: "Çıkar",
+    owner: "Sahibi",
+    editor: "Editör",
+    noCollaborators: "Henüz iş birlikçi yok.",
+    inviteSent: "Davet gönderildi!",
+    alreadyInvited: "Bu kullanıcı zaten davet edildi",
+    pendingInvites: "Bekleyen Davetler",
+    accept: "Kabul Et",
+    reject: "Reddet",
+    inviteDesc: "sizi bu kitapta iş birliğine davet etti:",
+    collaborated: "İş Birliği",
+  },
 };
 
 export default tr;

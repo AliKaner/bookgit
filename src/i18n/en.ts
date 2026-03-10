@@ -45,6 +45,7 @@ export interface Translations {
   userCard: { writer: string; myBooks: string; profile: string; signOut: string };
   preview: { title: string; page: string; of: string; noContent: string; close: string };
   genres: { fantasy: string; sci_fi: string; mystery: string; thriller: string; romance: string; historical: string; horror: string; adventure: string; literary_fiction: string; young_adult: string; childrens: string; dystopia: string; paranormal: string; crime: string; poetry: string; biography: string; self_help: string; graphic_novel: string };
+  collaborators: { title: string; invite: string; searchPlaceholder: string; inviteByEmail: string; emailPlaceholder: string; send: string; pending: string; accepted: string; rejected: string; remove: string; owner: string; editor: string; noCollaborators: string; inviteSent: string; alreadyInvited: string; pendingInvites: string; accept: string; reject: string; inviteDesc: string; collaborated: string };
 }
 
 // English — default language
@@ -332,6 +333,28 @@ const en: Translations = {
     biography: "Biography",
     self_help: "Self Help",
     graphic_novel: "Graphic Novel",
+  },
+  collaborators: {
+    title: "Collaborators",
+    invite: "Invite",
+    searchPlaceholder: "Search by name or email...",
+    inviteByEmail: "Invite by email",
+    emailPlaceholder: "email@example.com",
+    send: "Send Invite",
+    pending: "Pending",
+    accepted: "Active",
+    rejected: "Declined",
+    remove: "Remove",
+    owner: "Owner",
+    editor: "Editor",
+    noCollaborators: "No collaborators yet.",
+    inviteSent: "Invite sent!",
+    alreadyInvited: "This user has already been invited",
+    pendingInvites: "Pending Invites",
+    accept: "Accept",
+    reject: "Decline",
+    inviteDesc: "invited you to collaborate on",
+    collaborated: "Collaborated",
   },
 };
 
