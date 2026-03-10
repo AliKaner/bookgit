@@ -79,7 +79,7 @@ function LoginInner() {
         <p className="text-sm text-zinc-400 leading-relaxed mb-1">We sent a confirmation link to:</p>
         <p className="text-sm font-semibold text-violet-300 mb-6 bg-violet-900/20 border border-violet-800/40 rounded-lg px-3 py-2 inline-block">{sentEmail}</p>
         <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 text-left space-y-3 mb-6">
-          {["Open the email from BookGit", "Click the confirmation link", "You'll be logged in automatically"].map((step, i) => (
+          {["Open the email from Booktions", "Click the confirmation link", "You'll be logged in automatically"].map((step, i) => (
             <div key={i} className="flex items-center gap-3">
               <div className="w-6 h-6 rounded-full bg-violet-600/20 border border-violet-600/40 flex items-center justify-center flex-shrink-0">
                 <span className="text-[10px] font-bold text-violet-400">{i + 1}</span>
@@ -111,7 +111,7 @@ function LoginInner() {
           <div className="w-9 h-9 rounded-xl bg-violet-600 flex items-center justify-center shadow-lg shadow-violet-900/40">
             <BookOpen className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-bold text-white tracking-tight">BookGit</span>
+          <span className="text-xl font-bold text-white tracking-tight">Booktions</span>
         </div>
         <LanguageSwitcher />
       </div>

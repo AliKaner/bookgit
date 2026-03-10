@@ -40,7 +40,7 @@ export default function LandingPage() {
           <div className="w-8 h-8 rounded-xl bg-violet-600 flex items-center justify-center shadow-lg shadow-violet-900/50">
             <BookOpen className="w-4 h-4 text-white" />
           </div>
-          <span className="font-bold tracking-tight">BookGit</span>
+          <span className="font-bold tracking-tight">Booktions</span>
         </div>
         <div className="hidden md:flex items-center gap-6 px-4 py-2 rounded-2xl bg-zinc-900/50 border border-zinc-800 backdrop-blur-md">
           <Link href="/books" className="text-sm font-medium text-zinc-400 hover:text-white transition-colors">{t.entities.books}</Link>
@@ -87,7 +87,7 @@ export default function LandingPage() {
             <div className="w-2.5 h-2.5 rounded-full bg-amber-500/60" />
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/60" />
             <div className="flex-1 flex justify-center">
-              <span className="text-[10px] text-zinc-600 bg-zinc-800 px-3 py-0.5 rounded">bookgit.app · The Fellowship</span>
+              <span className="text-[10px] text-zinc-600 bg-zinc-800 px-3 py-0.5 rounded">booktions.com · The Fellowship</span>
             </div>
           </div>
           <div className="flex h-56">
@@ -145,7 +145,7 @@ export default function LandingPage() {
 
       <footer className="relative z-10 text-center py-8 border-t border-zinc-900 text-zinc-700 text-xs">
         <div className="flex items-center justify-center gap-2 mb-2">
-          <BookOpen className="w-3 h-3" /><span>BookGit</span>
+          <BookOpen className="w-3 h-3" /><span>Booktions</span>
         </div>
         {t.landing.footer}
       </footer>

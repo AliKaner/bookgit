@@ -24,7 +24,7 @@ export async function sendInviteEmail({
 
   try {
     const data = await resend.emails.send({
-      from: 'BookGit <onboarding@resend.dev>', // Replace with your domain when configured in Resend
+      from: 'Booktions <onboarding@resend.dev>', // Replace with your domain when configured in Resend
       to: [to],
       subject: `You've been invited to collaborate on "${bookTitle}"`,
       html: `
@@ -36,7 +36,7 @@ export async function sendInviteEmail({
                   <td style="padding: 40px 30px;">
                     <h1 style="margin: 0 0 20px 0; font-size: 24px; color: #18181b;">Collaboration Invite</h1>
                     <p style="margin: 0 0 16px 0; font-size: 16px; color: #52525b; line-height: 1.5;">Hello,</p>
-                    <p style="margin: 0 0 24px 0; font-size: 16px; color: #52525b; line-height: 1.5;"><strong>${inviterName}</strong> has invited you to collaborate on the book <strong>"${bookTitle}"</strong> on BookGit.</p>
+                    <p style="margin: 0 0 24px 0; font-size: 16px; color: #52525b; line-height: 1.5;"><strong>${inviterName}</strong> has invited you to collaborate on the book <strong>"${bookTitle}"</strong> on Booktions.</p>
                     
                     <table cellpadding="0" cellspacing="0" border="0">
                       <tr>

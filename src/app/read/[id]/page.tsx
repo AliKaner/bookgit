@@ -45,7 +45,7 @@ export default async function ReadPage({ params }: Props) {
             <div className="w-6 h-6 rounded-lg bg-violet-600 flex items-center justify-center shadow-lg shadow-violet-900/40">
               <BookOpen className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className="font-bold text-sm tracking-tight text-white">BookGit</span>
+            <span className="font-bold text-sm tracking-tight text-white">Booktions</span>
           </div>
 
           <div className="flex items-center gap-4">

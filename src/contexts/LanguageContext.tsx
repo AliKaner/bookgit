@@ -21,7 +21,7 @@ const LanguageContext = createContext<LanguageContextValue>({
   setLocale: () => {},
 });
 
-const STORAGE_KEY = "bookgit_locale";
+const STORAGE_KEY = "booktions_locale";
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>("en");

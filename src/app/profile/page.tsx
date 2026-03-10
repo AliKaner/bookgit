@@ -140,7 +140,7 @@ export default function ProfilePage() {
             <div className="w-6 h-6 rounded-lg bg-violet-600 flex items-center justify-center">
               <BookOpen className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className="font-bold text-sm">BookGit</span>
+            <span className="font-bold text-sm">Booktions</span>
           </Link>
           <div className="flex items-center gap-2">
             <LanguageSwitcher />

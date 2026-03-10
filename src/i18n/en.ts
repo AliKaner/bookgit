@@ -87,7 +87,7 @@ const en: Translations = {
     badge: "Built for writers by writers",
     headline1: "Branch your story.",
     headline2: "Choose the canon.",
-    sub: "BookGit is a git-style writing environment for authors. Branch between chapters, manage characters and world, and preview your book.",
+    sub: "Booktions is a git-style writing environment for authors. Branch between chapters, manage characters and world, and preview your book.",
     cta: "Start Writing",
     ctaSecondary: "Explore Books",
     featureHeading: "Everything you need, in one place",
