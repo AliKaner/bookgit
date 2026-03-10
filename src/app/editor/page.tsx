@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BookOpen, StickyNote, Users, Users2, Book, Settings, FileText, Globe, Eye, Save, Loader2 } from "lucide-react";
+import { BookOpen, StickyNote, Users, Users2, Book, Settings, FileText, Globe, Eye, Save, Loader2, Download } from "lucide-react";
 import { StoryEditor } from "@/components/editor/StoryEditor";
 import { CharacterPanel } from "@/components/CharacterPanel";
 import { NotesPanel } from "@/components/NotesPanel";
@@ -17,6 +17,9 @@ import { getBookState, saveBookState } from "@/app/actions/books";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { jsPDF } from "jspdf";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
+import { saveAs } from "file-saver";
 
 type LeftPanel = 'chapters' | 'notes' | null;
 type RightPanel = 'characters' | 'dictionary' | 'world' | 'settings' | 'collaborators' | null;
@@ -39,6 +42,7 @@ export default function EditorPage() {
   const [loading, setLoading] = useState(true);
   const [bookOwnerId, setBookOwnerId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [showExport, setShowExport] = useState(false);
 
   // Load data on mount
   useEffect(() => {
@@ -132,6 +136,54 @@ export default function EditorPage() {
     return () => clearTimeout(timer);
   }, [characters, dictionary, world, notes, chapters, activeChapterId]);
 
+  // ── Export Functions ─────────────────────────────────────────
+  const bookTitle = chapters[0]?.title || 'Book';
+
+  function exportPDF() {
+    const doc = new jsPDF();
+    let y = 20;
+    doc.setFontSize(22);
+    doc.text(bookTitle, 20, y); y += 15;
+    doc.setFontSize(12);
+    doc.text('', 20, y); y += 20;
+    chapters.forEach((ch, i) => {
+      if (y > 270) { doc.addPage(); y = 20; }
+      doc.setFontSize(16);
+      doc.text(ch.title || `Chapter ${i + 1}`, 20, y); y += 10;
+      doc.setFontSize(10);
+      const lines = doc.splitTextToSize(ch.content?.replace(/<[^>]*>/g, '') || '', 170);
+      lines.forEach((line: string) => {
+        if (y > 270) { doc.addPage(); y = 20; }
+        doc.text(line, 20, y); y += 5;
+      });
+      y += 15;
+    });
+    doc.save(`${bookTitle}.pdf`);
+  }
+
+  async function exportDocx() {
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children: [
+          new Paragraph({ text: bookTitle, heading: HeadingLevel.TITLE }),
+          ...chapters.flatMap((ch, i) => [
+            new Paragraph({ text: ch.title || `Chapter ${i + 1}`, heading: HeadingLevel.HEADING_1, spacing: { before: 400, after: 200 } }),
+            new Paragraph({ text: ch.content?.replace(/<[^>]*>/g, '') || '' }),
+          ]),
+        ],
+      }],
+    });
+    const blob = await Packer.toBlob(doc);
+    saveAs(blob, `${bookTitle}.docx`);
+  }
+
+  function exportInk() {
+    const inkData = { title: bookTitle, chapters: chapters.map(ch => ({ title: ch.title, content: ch.content })) };
+    const blob = new Blob([JSON.stringify(inkData, null, 2)], { type: 'application/json' });
+    saveAs(blob, `${bookTitle}.ink`);
+  }
+
   // Autosave Timer (Legacy interval-based fallback for the editor content itself)
   useEffect(() => {
     const intervalMin = state.styles.autosaveInterval || 0;
@@ -217,6 +269,30 @@ export default function EditorPage() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-700 dark:hover:bg-zinc-300">
             <Eye className="w-3.5 h-3.5" />{t.editor.preview}
           </button>
+
+          {/* Export Dropdown */}
+          <div className="relative">
+            <button onClick={() => setShowExport(!showExport)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700">
+              <Download className="w-3.5 h-3.5" />{t.entities.export}
+            </button>
+            {showExport && (
+              <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-lg py-1 z-50 animate-in fade-in slide-in-from-top-2">
+                <button onClick={() => { exportPDF(); setShowExport(false); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+                  <FileText className="w-3.5 h-3.5 text-red-500" /> {t.entities.pdf}
+                </button>
+                <button onClick={() => { exportDocx(); setShowExport(false); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+                  <FileText className="w-3.5 h-3.5 text-blue-500" /> {t.entities.docx}
+                </button>
+                <button onClick={() => { exportInk(); setShowExport(false); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+                  <FileText className="w-3.5 h-3.5 text-emerald-500" /> {t.entities.ink}
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Right toggles */}
           <div className="flex items-center gap-1">

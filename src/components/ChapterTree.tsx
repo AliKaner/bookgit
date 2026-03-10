@@ -1,8 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Plus, Pencil, Check, GitBranch, Trash2, List, GitCommitHorizontal, Star } from "lucide-react";
-import { Gitgraph, TemplateName, templateExtend } from "@gitgraph/react";
+import { Plus, Pencil, Check, GitBranch, Trash2, List, BookOpen, Star } from "lucide-react";
 import { useEditorStore, buildChapterTree, ChapterNode, WORDS_PER_A5_PAGE, Chapter } from "@/store/useEditorStore";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/contexts/LanguageContext";
@@ -19,7 +18,7 @@ const LANE_COLORS = [
   '#f87171', // red
 ];
 
-type ViewMode = 'list' | 'graph';
+type ViewMode = 'list' | 'pages';
 
 interface ChapterTreeProps {
   onSelect: (id: string) => void;
@@ -94,16 +93,16 @@ export function ChapterTree({ onSelect }: ChapterTreeProps) {
             <List className="w-3 h-3" />
           </button>
           <button
-            onClick={() => setViewMode('graph')}
-            title={t.chapterTree.graphView}
+            onClick={() => setViewMode('pages')}
+            title="Page View"
             className={cn(
               "p-1 rounded transition-all",
-              viewMode === 'graph'
+              viewMode === 'pages'
                 ? "bg-white dark:bg-zinc-700 text-zinc-800 dark:text-zinc-100 shadow-sm"
                 : "text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
             )}
           >
-            <GitCommitHorizontal className="w-3 h-3" />
+            <BookOpen className="w-3 h-3" />
           </button>
         </div>
       </div>
@@ -158,11 +157,7 @@ export function ChapterTree({ onSelect }: ChapterTreeProps) {
             />
           ))
         ) : (
-          <GitGraphView
-            chapters={chapters}
-            activeChapterId={activeChapterId}
-            onSelect={handleSelect}
-          />
+          <PageView chapters={chapters} activeChapterId={activeChapterId} onSelect={handleSelect} />
         )}
       </div>
 
@@ -308,124 +303,87 @@ function ListBranch({
   );
 }
 
-// ─── GIT GRAPH VIEW ───────────────────────────────────────────────
+// ─── PAGE VIEW ────────────────────────────────────────────────────
 
-interface GitGraphViewProps {
+interface PageViewProps {
   chapters: Chapter[];
   activeChapterId: string;
   onSelect: (id: string) => void;
 }
 
-export function GitGraphView({ chapters, activeChapterId, onSelect }: GitGraphViewProps) {
-  const tree = buildChapterTree(chapters);
+function PageView({ chapters, activeChapterId, onSelect }: PageViewProps) {
+  const { t } = useTranslation();
+  // Get canon chapters in order (walk the canon chain)
+  const roots = chapters.filter(c => c.parentId === null).sort((a, b) => a.order - b.order);
+  const orderedChapters: Chapter[] = [];
+  
+  function walkCanon(ch: Chapter) {
+    orderedChapters.push(ch);
+    const canonChild = chapters
+      .filter(c => c.parentId === ch.id && c.isCanon)
+      .sort((a, b) => a.order - b.order)[0];
+    if (canonChild) walkCanon(canonChild);
+  }
+  roots.forEach(r => walkCanon(r));
 
-  if (chapters.length === 0) return null;
-
-  const customTemplate = templateExtend(TemplateName.Metro, {
-    colors: LANE_COLORS,
-    commit: {
-      dot: {
-        size: 11,
-        strokeWidth: 2,
-      },
-      message: {
-        display: true,
-        displayAuthor: false,
-        displayHash: false,
-        font: "500 11px Inter, sans-serif",
-      },
-    },
-    branch: {
-      lineWidth: 2,
-      spacing: 25,
-    },
-  });
+  // If no canon chapters, show all by order
+  const displayChapters = orderedChapters.length > 0 ? orderedChapters : chapters;
 
   return (
-    <div className="p-4 overflow-x-auto overflow-y-hidden custom-gitgraph">
-      <Gitgraph options={{ template: customTemplate }}>
-        {(gitgraph) => {
-          // Recursive function to draw nodes
-          const renderNodes = (nodes: ChapterNode[], branch: any) => {
-            nodes.sort((a, b) => a.chapter.order - b.chapter.order);
+    <div className="space-y-3 p-2">
+      {displayChapters.map((ch, i) => {
+        const plainText = ch.content?.replace(/<[^>]+>/g, ' ').trim() || '';
+        const words = plainText.split(/\s+/).filter(Boolean);
+        const wordCount = words.length;
+        const pages = wordCount > 0 ? Math.ceil(wordCount / WORDS_PER_A5_PAGE) : 0;
+        const isActive = ch.id === activeChapterId;
+        const preview = plainText.length > 200 ? plainText.slice(0, 200) + '…' : plainText;
 
-            nodes.forEach((node) => {
-              const ch = node.chapter;
-              const isActive = ch.id === activeChapterId;
+        return (
+          <div
+            key={ch.id}
+            onClick={() => onSelect(ch.id)}
+            className={cn(
+              "rounded-xl border cursor-pointer transition-all hover:shadow-sm",
+              isActive
+                ? "border-violet-400 dark:border-violet-600 bg-violet-50/50 dark:bg-violet-950/20 shadow-sm"
+                : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-300 dark:hover:border-zinc-700"
+            )}
+          >
+            {/* Chapter header */}
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-zinc-100 dark:border-zinc-800">
+              <span className="text-[10px] font-bold text-zinc-300 dark:text-zinc-600 tabular-nums">{String(i + 1).padStart(2, '0')}</span>
+              <span className={cn(
+                "text-xs font-semibold flex-1 truncate",
+                isActive ? "text-violet-700 dark:text-violet-300" : "text-zinc-700 dark:text-zinc-300"
+              )}>
+                {ch.title}
+              </span>
+              {ch.isCanon && <Star className="w-3 h-3 text-amber-500 fill-current flex-shrink-0" />}
+            </div>
+            
+            {/* Content preview */}
+            <div className="px-3 py-2">
+              {preview ? (
+                <p className="text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400 line-clamp-4">
+                  {preview}
+                </p>
+              ) : (
+                <p className="text-[11px] text-zinc-300 dark:text-zinc-600 italic">Empty</p>
+              )}
+            </div>
 
-              // Commit this chapter
-              branch.commit({
-                subject: ch.title,
-                dotColor: ch.isCanon ? "#fbbf24" : undefined,
-                onClick: () => onSelect(ch.id),
-                renderMessage: (commit: any) => (
-                  <text
-                    x={20}
-                    y={5}
-                    fill={isActive ? (document.documentElement.classList.contains('dark') ? '#f4f4f5' : '#18181b') : '#71717a'}
-                    style={{ 
-                      fontSize: '11px', 
-                      fontWeight: isActive ? 600 : 500,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}
-                    onClick={() => onSelect(ch.id)}
-                  >
-                    {commit.subject}
-                    {ch.isCanon && " ⭐"}
-                  </text>
-                ),
-              });
-
-              if (node.children.length > 0) {
-                // To avoid visual stacking of parallel branches, we need to be careful.
-                // In Gitgraph, the "main" flow continues, while side branches are spawned.
-                
-                // 1. Separate children into Canon/Primary and others
-                const canonIndex = node.children.findIndex(c => c.chapter.isCanon);
-                const primaryIndex = canonIndex !== -1 ? canonIndex : 0;
-
-                const primaryChild = node.children[primaryIndex];
-                const sideChildren = node.children.filter((_, i) => i !== primaryIndex);
-
-                // 2. Spawn side branches first
-                sideChildren.forEach(child => {
-                  const sBranch = gitgraph.branch({
-                    name: child.chapter.id,
-                    style: { label: { display: false } }
-                  });
-                  renderNodes([child], sBranch);
-                });
-
-                // 3. Continue current branch with primary child
-                renderNodes([primaryChild], branch);
-              }
-            });
-          };
-
-          const roots = tree;
-          if (roots.length > 0) {
-            // If we have multiple roots, spawn parallel branches for each root
-            roots.forEach((root, i) => {
-              const branch = gitgraph.branch({
-                name: `root-${i}`,
-                style: { label: { display: false } }
-              });
-              renderNodes([root], branch);
-            });
-          }
-        }}
-      </Gitgraph>
-
-      <style jsx global>{`
-        .custom-gitgraph svg {
-          height: auto !important;
-          min-height: 400px;
-        }
-        .dark .custom-gitgraph text {
-          fill: #a1a1aa;
-        }
-      `}</style>
+            {/* Footer stats */}
+            {wordCount > 0 && (
+              <div className="flex items-center gap-2 px-3 py-1.5 border-t border-zinc-100 dark:border-zinc-800">
+                <span className="text-[9px] text-zinc-400 dark:text-zinc-500">{wordCount} {t.chapterTree.wordsAbbr}</span>
+                <span className="text-[9px] text-zinc-300 dark:text-zinc-600">·</span>
+                <span className="text-[9px] text-zinc-400 dark:text-zinc-500">~{pages} {t.chapterTree.pagesAbbr}</span>
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
