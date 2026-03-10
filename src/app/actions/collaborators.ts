@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { sendInviteEmail } from "@/lib/email";
+import { getSiteUrl } from "@/lib/utils";
 
 // ─── Search Users ────────────────────────────────────────────────
 export async function searchUsers(query: string) {
@@ -113,7 +114,7 @@ export async function inviteCollaborator(
     // Send email invite
     if (targetEmail) {
       const { data: inviter } = await supabase.from("profiles").select("display_name").eq("id", user.id).single();
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+      const siteUrl = getSiteUrl();
       await sendInviteEmail({
         to: targetEmail,
         inviterName: inviter?.display_name || 'Someone',
@@ -151,7 +152,7 @@ export async function inviteCollaborator(
   // Send email invite
   if (targetEmail) {
     const { data: inviter } = await supabase.from("profiles").select("display_name").eq("id", user.id).single();
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const siteUrl = getSiteUrl();
     await sendInviteEmail({
       to: targetEmail,
       inviterName: inviter?.display_name || 'Someone',
