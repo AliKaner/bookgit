@@ -8,6 +8,7 @@ import { getMyBooks } from "@/app/actions/books";
 import { signOut, updateProfile } from "@/app/actions/auth";
 import { BookCard } from "@/components/BookCard";
 import { LanguageSwitcher, useTranslation } from "@/contexts/LanguageContext";
+import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import type { BookWithMeta, Profile } from "@/types/supabase";
 import { getMyEntities, EntityType } from "@/app/actions/entities";
 import { EntityCard } from "@/components/entities/EntityCard";
@@ -144,6 +145,7 @@ export default function ProfilePage() {
           </Link>
           <div className="flex items-center gap-2">
             <LanguageSwitcher />
+            <NotificationsDropdown />
             <Link href="/books" className="text-xs text-zinc-500 hover:text-zinc-300 px-3 py-1.5 rounded-lg hover:bg-zinc-800 transition">
               {t.userCard.myBooks}
             </Link>

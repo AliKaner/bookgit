@@ -5,7 +5,7 @@ import { Search, Plus, LogOut, BookOpen, Globe, Lock, X, Library } from "lucide-
 import { useRouter } from "next/navigation";
 import { BookCard } from "@/components/BookCard";
 import { CreateBookDialog } from "@/components/CreateBookDialog";
-import { InviteBanner } from "@/components/InviteBanner";
+import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { getMyBooks, getPublicBooks, getGenres } from "@/app/actions/books";
 import { getMyInvites, getCollaboratedBooks, respondToInvite } from "@/app/actions/collaborators";
 import { signOut, getProfile } from "@/app/actions/auth";
@@ -145,6 +145,7 @@ export default function BooksPage() {
 
           <div className="flex items-center gap-2">
             <LanguageSwitcher />
+            <NotificationsDropdown />
             {profile?.display_name && <span className="text-xs text-zinc-500 hidden sm:block">{profile.display_name}</span>}
             <button onClick={() => startTransition(() => signOut())} className="p-2 rounded-lg hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition">
               <LogOut className="w-4 h-4" />
@@ -154,11 +155,6 @@ export default function BooksPage() {
       </header>
 
       <main className="relative max-w-6xl mx-auto px-6 py-8">
-        {/* Pending Invites */}
-        {feed === "mine" && pendingInvites.length > 0 && (
-          <InviteBanner invites={pendingInvites} onUpdate={refreshInvites} />
-        )}
-
         <div className="flex items-center gap-3 mb-6">
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-500" />

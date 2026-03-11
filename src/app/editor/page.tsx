@@ -11,6 +11,7 @@ import { ChapterTree } from "@/components/ChapterTree";
 import { BookPreview } from "@/components/BookPreview";
 import { UserCard } from "@/components/UserCard";
 import { CollaboratorsPanel } from "@/components/CollaboratorsPanel";
+import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { useEditorStore } from "@/store/useEditorStore";
 import { useTranslation, LanguageSwitcher } from "@/contexts/LanguageContext";
 import { getBookState, saveBookState } from "@/app/actions/books";
@@ -363,6 +364,7 @@ export default function EditorPage() {
 
           <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-700" />
           <LanguageSwitcher />
+          <NotificationsDropdown />
           <UserCard variant="header" />
         </header>
 

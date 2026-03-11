@@ -111,9 +111,20 @@ export async function inviteCollaborator(
       .single();
     if (error) return { error: error.message };
 
+    const { data: inviter } = await supabase.from("profiles").select("display_name").eq("id", user.id).single();
+
+    if (targetUserId) {
+      await supabase.from("notifications").insert({
+        user_id: targetUserId,
+        type: "collab_invite",
+        title: "New Collaboration Invite",
+        message: `${inviter?.display_name || 'Someone'} invited you to collaborate on "${book.title}"`,
+        data: { inviteId: collab.id, bookId }
+      });
+    }
+
     // Send email invite
     if (targetEmail) {
-      const { data: inviter } = await supabase.from("profiles").select("display_name").eq("id", user.id).single();
       const siteUrl = getSiteUrl();
       await sendInviteEmail({
         to: targetEmail,
@@ -149,9 +160,20 @@ export async function inviteCollaborator(
     return { error: error.message };
   }
 
+  const { data: inviter } = await supabase.from("profiles").select("display_name").eq("id", user.id).single();
+
+  if (targetUserId) {
+    await supabase.from("notifications").insert({
+      user_id: targetUserId,
+      type: "collab_invite",
+      title: "New Collaboration Invite",
+      message: `${inviter?.display_name || 'Someone'} invited you to collaborate on "${book.title}"`,
+      data: { inviteId: collab.id, bookId }
+    });
+  }
+
   // Send email invite
   if (targetEmail) {
-    const { data: inviter } = await supabase.from("profiles").select("display_name").eq("id", user.id).single();
     const siteUrl = getSiteUrl();
     await sendInviteEmail({
       to: targetEmail,
