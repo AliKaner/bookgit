@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { BookOpen, StickyNote, Users, Users2, Book, Settings, FileText, Globe, Eye, Save, Loader2, Download } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { BookOpen, StickyNote, Users, Users2, Book, Settings, FileText, Globe, Eye, Save, Loader2, Download, History, User as UserIcon } from "lucide-react";
 import { StoryEditor } from "@/components/editor/StoryEditor";
 import { CharacterPanel } from "@/components/CharacterPanel";
 import { NotesPanel } from "@/components/NotesPanel";
@@ -11,10 +11,13 @@ import { ChapterTree } from "@/components/ChapterTree";
 import { BookPreview } from "@/components/BookPreview";
 import { UserCard } from "@/components/UserCard";
 import { CollaboratorsPanel } from "@/components/CollaboratorsPanel";
+import { ActivityPanel } from "@/components/ActivityPanel";
 import { NotificationsDropdown } from "@/components/NotificationsDropdown";
 import { useEditorStore } from "@/store/useEditorStore";
 import { useTranslation, LanguageSwitcher } from "@/contexts/LanguageContext";
 import { getBookState, saveBookState } from "@/app/actions/books";
+import { logActivity } from "@/app/actions/activity";
+import { useRealtimeCollab } from "@/hooks/useRealtimeCollab";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -22,7 +25,7 @@ import { jsPDF } from "jspdf";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 import { saveAs } from "file-saver";
 
-type LeftPanel = 'chapters' | 'notes' | null;
+type LeftPanel = 'chapters' | 'notes' | 'history' | null;
 type RightPanel = 'characters' | 'dictionary' | 'world' | 'settings' | 'collaborators' | null;
 
 const COLOR_HEX: Record<string, string> = {
@@ -44,6 +47,8 @@ export default function EditorPage() {
   const [bookOwnerId, setBookOwnerId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [showExport, setShowExport] = useState(false);
+  const [currentDisplayName, setCurrentDisplayName] = useState("Writer");
+  const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(null);
 
   // Load data on mount
   useEffect(() => {
@@ -64,7 +69,14 @@ export default function EditorPage() {
         const { data: bookData } = await supabase.from("books").select("user_id").eq("id", bookId!).single();
         if (bookData) setBookOwnerId(bookData.user_id);
         const { data: { user } } = await supabase.auth.getUser();
-        if (user) setCurrentUserId(user.id);
+        if (user) {
+          setCurrentUserId(user.id);
+          const { data: profile } = await supabase.from("profiles").select("display_name, avatar_url").eq("id", user.id).single();
+          if (profile) {
+            setCurrentDisplayName(profile.display_name || "Writer");
+            setCurrentAvatarUrl(profile.avatar_url);
+          }
+        }
       } catch (err) {
         console.error("Failed to load book state:", err);
       } finally {
@@ -107,6 +119,9 @@ export default function EditorPage() {
       
       if (result && 'success' in result && result.success) {
         console.log(`[Save] Success for book ${bookId}`);
+        // Log activity
+        const activeChap = useEditorStore.getState().chapters.find(ch => ch.id === useEditorStore.getState().activeChapterId);
+        logActivity(bookId, activeChap?.id ?? null, activeChap?.title ?? null, 'edited').catch(() => {});
         if (showIndicator) {
           setSaveState('saved');
           setTimeout(() => setSaveState('idle'), 2000);
@@ -246,6 +261,18 @@ export default function EditorPage() {
     return () => clearInterval(timer);
   }, [state.styles.autosaveInterval]); // Removed 'state' from deps to avoid infinite loops with reactive save
 
+  // Realtime collaboration
+  const { onlineUsers, broadcastContent } = useRealtimeCollab({
+    bookId: state.bookId || '',
+    userId: currentUserId,
+    displayName: currentDisplayName,
+    avatarUrl: currentAvatarUrl,
+    chapterId: activeChapterId,
+    onRemoteContent: useCallback((chapId: string, html: string) => {
+      useEditorStore.getState().updateChapterContent(chapId, html);
+    }, []),
+  });
+
   if (loading) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-zinc-950">
@@ -267,6 +294,7 @@ export default function EditorPage() {
         <div className="flex-1 overflow-hidden">
           {leftPanel === 'chapters' && <ChapterTree onSelect={(id) => setActiveChapter(id)} />}
           {leftPanel === 'notes' && <NotesPanel />}
+          {leftPanel === 'history' && state.bookId && <ActivityPanel bookId={state.bookId} />}
         </div>
         {leftPanel && <UserCard variant="sidebar" />}
       </div>
@@ -287,7 +315,28 @@ export default function EditorPage() {
             <ToggleBtn active={leftPanel === 'notes'} onClick={() => setLeftPanel(p => p === 'notes' ? null : 'notes')}
               icon={<StickyNote className="w-3.5 h-3.5" />} label={t.editor.notes}
               activeClass="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300" />
+            <ToggleBtn active={leftPanel === 'history'} onClick={() => setLeftPanel(p => p === 'history' ? null : 'history')}
+              icon={<History className="w-3.5 h-3.5" />} label="History"
+              activeClass="bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300" />
           </div>
+
+          {/* Online collaborators presence */}
+          {onlineUsers.length > 0 && (
+            <div className="flex items-center gap-1">
+              {onlineUsers.slice(0, 5).map(u => (
+                <div key={u.userId} title={`${u.displayName} is editing`}
+                  className="w-6 h-6 rounded-full bg-zinc-200 dark:bg-zinc-700 border-2 border-emerald-500 overflow-hidden flex items-center justify-center flex-shrink-0"
+                >
+                  {u.avatarUrl ? (
+                    <img src={u.avatarUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <UserIcon className="w-3 h-3 text-zinc-400" />
+                  )}
+                </div>
+              ))}
+              <span className="text-[10px] text-emerald-500 font-medium ml-1">{onlineUsers.length} online</span>
+            </div>
+          )}
 
           <div className="flex-1" />
 
