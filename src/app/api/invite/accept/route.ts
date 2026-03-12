@@ -15,13 +15,16 @@ export async function GET(request: NextRequest) {
 
   if (!user) {
     // Save intent in a non-HttpOnly cookie so the client can read it after login
-    const cookieStore = await cookies();
-    cookieStore.set("pending_invite_id", id, { 
+    const loginUrl = new URL("/login", request.url);
+    const response = NextResponse.redirect(loginUrl);
+    
+    response.cookies.set("pending_invite_id", id, { 
       path: "/", 
       maxAge: 3600,
       httpOnly: false // Important: Allows client-side reading after login
     });
-    return NextResponse.redirect(`${origin}/login`);
+    
+    return response;
   }
 
   // If logged in, accept it immediately
@@ -34,7 +37,7 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     console.error("Invite accept error:", error);
-    return NextResponse.redirect(`${origin}/books`);
+    return NextResponse.redirect(new URL("/books", request.url));
   }
 
   // Get the book ID to redirect directly to the editor
@@ -45,8 +48,8 @@ export async function GET(request: NextRequest) {
     .single();
   
   if (collab?.book_id) {
-    return NextResponse.redirect(`${origin}/editor?bookId=${collab.book_id}`);
+    return NextResponse.redirect(new URL(`/editor?bookId=${collab.book_id}`, request.url));
   }
 
-  return NextResponse.redirect(`${origin}/books`);
+  return NextResponse.redirect(new URL("/books", request.url));
 }

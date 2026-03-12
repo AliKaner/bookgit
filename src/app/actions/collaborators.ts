@@ -307,5 +307,15 @@ export async function getCollaboratedBooks() {
     .is("deleted_at", null)
     .order("updated_at", { ascending: false });
 
-  return data ?? [];
+  if (!data) return [];
+
+  const formatted = data.map(b => ({
+    ...b,
+    genres: b.genres?.map((g: any) => g.genre) || [],
+    tags: b.tags?.map((t: any) => t.tag) || [],
+    stats: b.stats?.[0] || { word_count: 0, chapter_count: 0, branch_count: 0 },
+    profile: b.profile
+  }));
+
+  return formatted;
 }
